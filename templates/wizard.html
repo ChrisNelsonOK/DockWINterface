@@ -66,11 +66,32 @@
                                 <label for="windowsVersion" class="form-label">Windows Version *</label>
                                 <select class="form-select bg-dark text-light" id="windowsVersion" name="version" required>
                                     <option value="">Select Version</option>
-                                    <option value="11">Windows 11</option>
-                                    <option value="10">Windows 10</option>
-                                    <option value="2022">Windows Server 2022</option>
-                                    <option value="2019">Windows Server 2019</option>
-                                    <option value="ltsc2019">Windows 10 LTSC 2019</option>
+                                    <optgroup label="Windows 10">
+                                        <option value="10">Windows 10 Home</option>
+                                        <option value="10-pro">Windows 10 Pro</option>
+                                        <option value="10-enterprise">Windows 10 Enterprise</option>
+                                        <option value="10-iot">Windows 10 IoT Enterprise</option>
+                                        <option value="ltsc2019">Windows 10 LTSC 2019</option>
+                                        <option value="ltsc2021">Windows 10 LTSC 2021</option>
+                                    </optgroup>
+                                    <optgroup label="Windows 11">
+                                        <option value="11">Windows 11 Home</option>
+                                        <option value="11-pro">Windows 11 Pro</option>
+                                        <option value="11-enterprise">Windows 11 Enterprise</option>
+                                        <option value="11-iot">Windows 11 IoT Enterprise</option>
+                                    </optgroup>
+                                    <optgroup label="Windows Server 2025">
+                                        <option value="2025-standard">Windows Server 2025 Standard</option>
+                                        <option value="2025-datacenter">Windows Server 2025 Datacenter</option>
+                                    </optgroup>
+                                    <optgroup label="Windows Server 2022">
+                                        <option value="2022-standard">Windows Server 2022 Standard</option>
+                                        <option value="2022-datacenter">Windows Server 2022 Datacenter</option>
+                                    </optgroup>
+                                    <optgroup label="Windows Server 2019">
+                                        <option value="2019-standard">Windows Server 2019 Standard</option>
+                                        <option value="2019-datacenter">Windows Server 2019 Datacenter</option>
+                                    </optgroup>
                                 </select>
                             </div>
                         </div>
@@ -150,6 +171,10 @@
                                     <option value="16">16 GB</option>
                                     <option value="24">24 GB</option>
                                     <option value="32">32 GB</option>
+                                    <option value="48">48 GB</option>
+                                    <option value="64">64 GB</option>
+                                    <option value="96">96 GB</option>
+                                    <option value="128">128 GB</option>
                                 </select>
                             </div>
                         </div>
@@ -198,14 +223,178 @@
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-12 mb-3">
+                            <div class="col-md-6 mb-3">
                                 <label for="networkMode" class="form-label">Network Mode</label>
-                                <select class="form-select bg-dark text-light" id="networkMode" name="network_mode">
+                                <select class="form-select bg-dark text-light" id="networkMode" name="network_mode" onchange="toggleStaticIPConfig()">
                                     <option value="">Default (Bridge)</option>
                                     <option value="host">Host Network</option>
+                                    <option value="static">Static IP Configuration</option>
                                     <option value="none">No Network</option>
                                 </select>
                                 <div class="form-text">Network isolation mode for the container</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="dnsServers" class="form-label">DNS Servers (Optional)</label>
+                                <input type="text" class="form-control bg-dark text-light" id="dnsServers" name="dns_servers" placeholder="8.8.8.8,8.8.4.4">
+                                <div class="form-text">Comma-separated DNS server addresses</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Static IP Configuration -->
+                        <div id="staticIpConfig" class="row" style="display: none;">
+                            <div class="col-12 mb-3">
+                                <h6 class="text-danger mb-3"><i class="fas fa-network-wired me-2"></i>Static IP Configuration</h6>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="staticIp" class="form-label">Static IP Address *</label>
+                                <input type="text" class="form-control bg-dark text-light" id="staticIp" name="static_ip" placeholder="192.168.1.100">
+                                <div class="form-text">IPv4 address for the container</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="subnetMask" class="form-label">Subnet Mask *</label>
+                                <input type="text" class="form-control bg-dark text-light" id="subnetMask" name="subnet_mask" placeholder="255.255.255.0" value="255.255.255.0">
+                                <div class="form-text">Network subnet mask</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="gateway" class="form-label">Gateway *</label>
+                                <input type="text" class="form-control bg-dark text-light" id="gateway" name="gateway" placeholder="192.168.1.1">
+                                <div class="form-text">Default gateway address</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="networkName" class="form-label">Network Name</label>
+                                <input type="text" class="form-control bg-dark text-light" id="networkName" name="network_name" placeholder="dokwinter-network">
+                                <div class="form-text">Custom Docker network name</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Additional Network Interfaces -->
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <h6 class="text-light mb-3"><i class="fas fa-plus-circle me-2"></i>Additional Network Interfaces</h6>
+                                <div id="nicContainer">
+                                    <!-- Additional NICs will be added here -->
+                                </div>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="addNetworkInterface()">
+                                    <i class="fas fa-plus me-1"></i>Add Network Interface
+                                </button>
+                                <div class="form-text mt-2">Add additional network interfaces for multi-homed configurations</div>
+                            </div>
+                        </div>
+                        
+                        <!-- SNMP/WMI Services Configuration -->
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <h6 class="text-danger mb-3"><i class="fas fa-chart-line me-2"></i>SNMP & WMI Services</h6>
+                            </div>
+                            <div class="col-12 mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="enableSnmp" name="enable_snmp" onchange="toggleSnmpConfig()">
+                                    <label class="form-check-label" for="enableSnmp">
+                                        Enable SNMP Services
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="snmpConfig" class="row" style="display: none;">
+                            <div class="col-md-6 mb-3">
+                                <label for="snmpCommunity" class="form-label">SNMP Community String</label>
+                                <input type="text" class="form-control bg-dark text-light" id="snmpCommunity" name="snmp_community" placeholder="public">
+                                <div class="form-text">SNMP read community string</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="snmpPort" class="form-label">SNMP Port</label>
+                                <input type="number" class="form-control bg-dark text-light" id="snmpPort" name="snmp_port" min="1" max="65535" value="161">
+                                <div class="form-text">SNMP service port</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="snmpLocation" class="form-label">SNMP Location</label>
+                                <input type="text" class="form-control bg-dark text-light" id="snmpLocation" name="snmp_location" placeholder="Data Center Rack 42">
+                                <div class="form-text">Physical location description</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="snmpContact" class="form-label">SNMP Contact</label>
+                                <input type="text" class="form-control bg-dark text-light" id="snmpContact" name="snmp_contact" placeholder="admin@company.com">
+                                <div class="form-text">Administrative contact information</div>
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label for="snmpTrapDestinations" class="form-label">SNMP Trap Destinations</label>
+                                <textarea class="form-control bg-dark text-light" id="snmpTrapDestinations" name="snmp_trap_destinations" rows="3" placeholder="192.168.1.10:162&#10;192.168.1.20:162"></textarea>
+                                <div class="form-text">One destination per line (IP:Port format)</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Logging Server Configuration -->
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <h6 class="text-danger mb-3"><i class="fas fa-file-alt me-2"></i>Logging Server Configuration</h6>
+                            </div>
+                            <div class="col-12 mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="enableLogging" name="enable_logging" onchange="toggleLoggingConfig()">
+                                    <label class="form-check-label" for="enableLogging">
+                                        Enable Centralized Logging
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="loggingConfig" class="row" style="display: none;">
+                            <div class="col-md-6 mb-3">
+                                <label for="logServerHost" class="form-label">Log Server Host *</label>
+                                <input type="text" class="form-control bg-dark text-light" id="logServerHost" name="log_server_host" placeholder="192.168.1.100">
+                                <div class="form-text">IP address or hostname of log server</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="logServerPort" class="form-label">Log Server Port</label>
+                                <input type="number" class="form-control bg-dark text-light" id="logServerPort" name="log_server_port" min="1" max="65535" value="514">
+                                <div class="form-text">Syslog server port (default: 514)</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="logProtocol" class="form-label">Protocol</label>
+                                <select class="form-select bg-dark text-light" id="logProtocol" name="log_protocol">
+                                    <option value="udp">UDP</option>
+                                    <option value="tcp">TCP</option>
+                                    <option value="tls">TLS</option>
+                                </select>
+                                <div class="form-text">Transport protocol for log transmission</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="logFormat" class="form-label">Log Format</label>
+                                <select class="form-select bg-dark text-light" id="logFormat" name="log_format">
+                                    <option value="rfc3164">RFC 3164 (BSD Syslog)</option>
+                                    <option value="rfc5424">RFC 5424 (New Syslog)</option>
+                                    <option value="json">JSON</option>
+                                    <option value="cef">Common Event Format (CEF)</option>
+                                </select>
+                                <div class="form-text">Log message format</div>
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Log Sources to Forward</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="logWindowsEvents" name="log_windows_events" checked>
+                                    <label class="form-check-label" for="logWindowsEvents">
+                                        Windows Event Logs
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="logSnmpTraps" name="log_snmp_traps" checked>
+                                    <label class="form-check-label" for="logSnmpTraps">
+                                        SNMP Traps
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="logPerformanceMetrics" name="log_performance_metrics" checked>
+                                    <label class="form-check-label" for="logPerformanceMetrics">
+                                        Performance Metrics
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="logApplicationTraces" name="log_application_traces">
+                                    <label class="form-check-label" for="logApplicationTraces">
+                                        Application Traces
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>

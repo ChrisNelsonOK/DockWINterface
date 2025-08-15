@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeWizard();
     setupFormValidation();
     setupVolumeManagement();
+    setupNetworkManagement();
     setupAutoSave();
 });
 
@@ -424,7 +425,8 @@ function generateConfigurationReview() {
     
     const config = {
         ...formData,
-        additional_volumes: collectVolumeMounts()
+        additional_volumes: collectVolumeMounts(),
+        additional_networks: collectNetworkInterfaces()
     };
     
     const reviewHTML = `
@@ -457,6 +459,10 @@ function generateConfigurationReview() {
                     <tr><td>RDP Port:</td><td>${config.rdp_port || '3389'}</td></tr>
                     <tr><td>VNC Port:</td><td>${config.vnc_port || '8006'}</td></tr>
                     <tr><td>Network Mode:</td><td>${config.network_mode || 'Default (Bridge)'}</td></tr>
+                    ${config.network_mode === 'static' && config.static_ip ? `<tr><td>Static IP:</td><td>${config.static_ip}</td></tr>` : ''}
+                    ${config.enable_snmp ? `<tr><td>SNMP Enabled:</td><td>Yes</td></tr>` : ''}
+                    ${config.enable_logging ? `<tr><td>Logging Server:</td><td>${config.log_server_host || 'Not configured'}</td></tr>` : ''}
+                    <tr><td>Additional NICs:</td><td>${config.additional_networks ? config.additional_networks.length : 0} interface(s)</td></tr>
                 </table>
             </div>
             <div class="col-md-6">
@@ -485,7 +491,8 @@ async function generateConfig() {
     
     const config = {
         ...formData,
-        additional_volumes: collectVolumeMounts()
+        additional_volumes: collectVolumeMounts(),
+        additional_networks: collectNetworkInterfaces()
     };
     
     // Validate configuration before generating
@@ -724,12 +731,150 @@ function clearWizardData() {
     }
 }
 
+// Network Interface Management
+function setupNetworkManagement() {
+    // Initialize network interface management
+    updateNetworkIndexes();
+}
+
+function addNetworkInterface() {
+    const container = document.getElementById('nicContainer');
+    if (!container) return;
+    
+    const nicInterface = document.createElement('div');
+    nicInterface.className = 'network-interface mb-3 p-3 border border-secondary rounded';
+    nicInterface.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h6 class="text-light mb-0"><i class="fas fa-ethernet me-2"></i>Network Interface</h6>
+            <button class="btn btn-outline-danger btn-sm" type="button" onclick="removeNetworkInterface(this)">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-2">
+                <label class="form-label">Interface Name</label>
+                <input type="text" class="form-control form-control-sm bg-dark text-light" placeholder="eth1" data-nic-type="name">
+            </div>
+            <div class="col-md-6 mb-2">
+                <label class="form-label">Network Name</label>
+                <input type="text" class="form-control form-control-sm bg-dark text-light" placeholder="secondary-network" data-nic-type="network">
+            </div>
+            <div class="col-md-6 mb-2">
+                <label class="form-label">IP Address</label>
+                <input type="text" class="form-control form-control-sm bg-dark text-light" placeholder="192.168.2.100" data-nic-type="ip">
+            </div>
+            <div class="col-md-6 mb-2">
+                <label class="form-label">Subnet Mask</label>
+                <input type="text" class="form-control form-control-sm bg-dark text-light" placeholder="255.255.255.0" data-nic-type="subnet">
+            </div>
+        </div>
+    `;
+    
+    container.appendChild(nicInterface);
+    updateNetworkIndexes();
+}
+
+function removeNetworkInterface(button) {
+    const nicInterface = button.closest('.network-interface');
+    if (nicInterface) {
+        nicInterface.remove();
+        updateNetworkIndexes();
+    }
+}
+
+function updateNetworkIndexes() {
+    const networkInterfaces = document.querySelectorAll('.network-interface');
+    networkInterfaces.forEach((nic, index) => {
+        const nameInput = nic.querySelector('[data-nic-type="name"]');
+        const networkInput = nic.querySelector('[data-nic-type="network"]');
+        const ipInput = nic.querySelector('[data-nic-type="ip"]');
+        const subnetInput = nic.querySelector('[data-nic-type="subnet"]');
+        
+        if (nameInput) nameInput.name = `nic_name_${index}`;
+        if (networkInput) networkInput.name = `nic_network_${index}`;
+        if (ipInput) ipInput.name = `nic_ip_${index}`;
+        if (subnetInput) subnetInput.name = `nic_subnet_${index}`;
+    });
+}
+
+function collectNetworkInterfaces() {
+    const networkInterfaces = [];
+    const nicElements = document.querySelectorAll('.network-interface');
+    
+    nicElements.forEach(nic => {
+        const name = nic.querySelector('[data-nic-type="name"]').value.trim();
+        const network = nic.querySelector('[data-nic-type="network"]').value.trim();
+        const ip = nic.querySelector('[data-nic-type="ip"]').value.trim();
+        const subnet = nic.querySelector('[data-nic-type="subnet"]').value.trim();
+        
+        if (name && network) {
+            networkInterfaces.push({
+                name,
+                network,
+                ip: ip || null,
+                subnet: subnet || null
+            });
+        }
+    });
+    
+    return networkInterfaces;
+}
+
+// Configuration Toggle Functions
+function toggleStaticIPConfig() {
+    const networkMode = document.getElementById('networkMode').value;
+    const staticIpConfig = document.getElementById('staticIpConfig');
+    
+    if (staticIpConfig) {
+        if (networkMode === 'static') {
+            staticIpConfig.style.display = 'block';
+            // Make static IP fields required
+            const requiredFields = staticIpConfig.querySelectorAll('input[name="static_ip"], input[name="gateway"]');
+            requiredFields.forEach(field => field.required = true);
+        } else {
+            staticIpConfig.style.display = 'none';
+            // Remove required attribute
+            const fields = staticIpConfig.querySelectorAll('input');
+            fields.forEach(field => field.required = false);
+        }
+    }
+}
+
+function toggleSnmpConfig() {
+    const enableSnmp = document.getElementById('enableSnmp').checked;
+    const snmpConfig = document.getElementById('snmpConfig');
+    
+    if (snmpConfig) {
+        snmpConfig.style.display = enableSnmp ? 'block' : 'none';
+    }
+}
+
+function toggleLoggingConfig() {
+    const enableLogging = document.getElementById('enableLogging').checked;
+    const loggingConfig = document.getElementById('loggingConfig');
+    
+    if (loggingConfig) {
+        loggingConfig.style.display = enableLogging ? 'block' : 'none';
+        
+        // Make log server host required when logging is enabled
+        const logServerHost = document.getElementById('logServerHost');
+        if (logServerHost) {
+            logServerHost.required = enableLogging;
+        }
+    }
+}
+
 // Export wizard functions to global scope
 window.nextStep = nextStep;
 window.previousStep = previousStep;
 window.goToStep = goToStep;
 window.addVolumeMount = addVolumeMount;
 window.removeVolumeMount = removeVolumeMount;
+window.addNetworkInterface = addNetworkInterface;
+window.removeNetworkInterface = removeNetworkInterface;
+window.toggleStaticIPConfig = toggleStaticIPConfig;
+window.toggleSnmpConfig = toggleSnmpConfig;
+window.toggleLoggingConfig = toggleLoggingConfig;
 window.generateConfig = generateConfig;
 window.validateWithAI = validateWithAI;
 window.downloadConfig = downloadConfig;

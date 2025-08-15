@@ -41,8 +41,18 @@ class DockerConfigGenerator:
         if volumes:
             compose_config['services'][config.get('name', 'windows')]['volumes'] = volumes
         
-        # Add network configuration if specified
-        if config.get('network_mode'):
+        # Add network configuration
+        networks = self._generate_networks(config)
+        if networks:
+            if 'networks' not in compose_config:
+                compose_config['networks'] = {}
+            compose_config['networks'].update(networks)
+            
+            # Connect service to networks
+            service_networks = self._generate_service_networks(config)
+            if service_networks:
+                compose_config['services'][config.get('name', 'windows')]['networks'] = service_networks
+        elif config.get('network_mode') and config.get('network_mode') != 'static':
             compose_config['services'][config.get('name', 'windows')]['network_mode'] = config['network_mode']
         
         # Add resource limits if specified
@@ -71,15 +81,21 @@ class DockerConfigGenerator:
         if config.get('password'):
             env_vars.append(f"PASSWORD={config['password']}")
         
-        # Disk configuration
-        if config.get('disk_size'):
-            env_vars.append(f"DISK_SIZE={config['disk_size']}G")
+        # Language and keyboard settings
+        if config.get('language'):
+            env_vars.append(f"LANGUAGE={config['language']}")
+        if config.get('keyboard'):
+            env_vars.append(f"KEYBOARD={config['keyboard']}")
         
-        # CPU and RAM configuration
+        # System resources
         if config.get('cpu_cores'):
             env_vars.append(f"CPU_CORES={config['cpu_cores']}")
         if config.get('ram_size'):
             env_vars.append(f"RAM_SIZE={config['ram_size']}G")
+        
+        # Disk configuration
+        if config.get('disk_size'):
+            env_vars.append(f"DISK_SIZE={config['disk_size']}G")
         
         # Additional options
         if config.get('enable_kvm', True):
@@ -88,11 +104,60 @@ class DockerConfigGenerator:
         if config.get('debug', False):
             env_vars.append("DEBUG=Y")
         
-        if config.get('language'):
-            env_vars.append(f"LANGUAGE={config['language']}")
+        # Network configuration
+        if config.get('dns_servers'):
+            env_vars.append(f"DNS={config['dns_servers']}")
         
-        if config.get('keyboard'):
-            env_vars.append(f"KEYBOARD={config['keyboard']}")
+        # Static IP configuration
+        if config.get('network_mode') == 'static':
+            if config.get('static_ip'):
+                env_vars.append(f"IP={config['static_ip']}")
+            if config.get('gateway'):
+                env_vars.append(f"GATEWAY={config['gateway']}")
+            if config.get('subnet_mask'):
+                env_vars.append(f"NETMASK={config['subnet_mask']}")
+        
+        # SNMP configuration
+        if config.get('enable_snmp'):
+            env_vars.append("SNMP_ENABLED=Y")
+            if config.get('snmp_community'):
+                env_vars.append(f"SNMP_COMMUNITY={config['snmp_community']}")
+            if config.get('snmp_port'):
+                env_vars.append(f"SNMP_PORT={config['snmp_port']}")
+            if config.get('snmp_location'):
+                env_vars.append(f"SNMP_LOCATION={config['snmp_location']}")
+            if config.get('snmp_contact'):
+                env_vars.append(f"SNMP_CONTACT={config['snmp_contact']}")
+            if config.get('snmp_trap_destinations'):
+                # Convert multiline trap destinations to comma-separated list
+                traps = config['snmp_trap_destinations'].strip().replace('\n', ',')
+                env_vars.append(f"SNMP_TRAPS={traps}")
+        
+        # Logging configuration
+        if config.get('enable_logging'):
+            env_vars.append("LOGGING_ENABLED=Y")
+            if config.get('log_server_host'):
+                env_vars.append(f"LOG_SERVER={config['log_server_host']}")
+            if config.get('log_server_port'):
+                env_vars.append(f"LOG_PORT={config['log_server_port']}")
+            if config.get('log_protocol'):
+                env_vars.append(f"LOG_PROTOCOL={config['log_protocol']}")
+            if config.get('log_format'):
+                env_vars.append(f"LOG_FORMAT={config['log_format']}")
+            
+            # Log sources
+            log_sources = []
+            if config.get('log_windows_events'):
+                log_sources.append('windows_events')
+            if config.get('log_snmp_traps'):
+                log_sources.append('snmp_traps')
+            if config.get('log_performance_metrics'):
+                log_sources.append('performance_metrics')
+            if config.get('log_application_traces'):
+                log_sources.append('application_traces')
+            
+            if log_sources:
+                env_vars.append(f"LOG_SOURCES={','.join(log_sources)}")
         
         return env_vars
     
@@ -113,6 +178,84 @@ class DockerConfigGenerator:
                     volumes.append(volume)
         
         return volumes
+    
+    def _generate_networks(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate Docker networks configuration"""
+        networks = {}
+        
+        # Static IP network configuration
+        if config.get('network_mode') == 'static':
+            network_name = config.get('network_name', 'dokwinter-network')
+            networks[network_name] = {
+                'driver': 'bridge',
+                'ipam': {
+                    'config': [{
+                        'subnet': self._calculate_subnet(config.get('static_ip', ''), config.get('subnet_mask', '255.255.255.0')),
+                        'gateway': config.get('gateway')
+                    }]
+                }
+            }
+        
+        # Additional network interfaces
+        if config.get('additional_networks'):
+            for i, network_config in enumerate(config['additional_networks']):
+                if isinstance(network_config, dict) and network_config.get('network'):
+                    net_name = network_config['network']
+                    networks[net_name] = {
+                        'driver': 'bridge'
+                    }
+                    if network_config.get('ip') and network_config.get('subnet'):
+                        networks[net_name]['ipam'] = {
+                            'config': [{
+                                'subnet': self._calculate_subnet(network_config.get('ip', ''), network_config.get('subnet', '255.255.255.0'))
+                            }]
+                        }
+        
+        return networks
+    
+    def _generate_service_networks(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate service network configuration"""
+        service_networks = {}
+        
+        # Static IP configuration
+        if config.get('network_mode') == 'static' and config.get('static_ip'):
+            network_name = config.get('network_name', 'dokwinter-network')
+            service_networks[network_name] = {
+                'ipv4_address': config['static_ip']
+            }
+        
+        # Additional network interfaces
+        if config.get('additional_networks'):
+            for network_config in config['additional_networks']:
+                if isinstance(network_config, dict) and network_config.get('network'):
+                    net_name = network_config['network']
+                    service_networks[net_name] = {}
+                    if network_config.get('ip'):
+                        service_networks[net_name]['ipv4_address'] = network_config['ip']
+        
+        return service_networks
+    
+    def _calculate_subnet(self, ip_address: str, subnet_mask: str) -> str:
+        """Calculate subnet CIDR from IP and mask"""
+        if not ip_address or not subnet_mask:
+            return "172.20.0.0/16"  # Default subnet
+        
+        try:
+            # Convert subnet mask to CIDR notation
+            mask_parts = subnet_mask.split('.')
+            if len(mask_parts) == 4:
+                cidr = sum([bin(int(part)).count('1') for part in mask_parts])
+                ip_parts = ip_address.split('.')
+                if len(ip_parts) == 4:
+                    # Calculate network address
+                    network_parts = []
+                    for i in range(4):
+                        network_parts.append(str(int(ip_parts[i]) & int(mask_parts[i])))
+                    return f"{'.'.join(network_parts)}/{cidr}"
+        except (ValueError, IndexError):
+            pass
+        
+        return "172.20.0.0/16"  # Fallback subnet
     
     def generate_env_file(self, config: Dict[str, Any]) -> str:
         """Generate .env file content"""
@@ -165,8 +308,8 @@ class DockerConfigGenerator:
         if config.get('ram_size'):
             try:
                 ram_size = int(config['ram_size'])
-                if ram_size < 2 or ram_size > 64:
-                    warnings.append("RAM size should be between 2GB and 64GB")
+                if ram_size < 2 or ram_size > 128:
+                    warnings.append("RAM size should be between 2GB and 128GB")
             except ValueError:
                 errors.append("RAM size must be a valid number")
         

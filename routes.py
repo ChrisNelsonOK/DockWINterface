@@ -37,25 +37,49 @@ def generate_config():
     try:
         data = request.get_json()
         
-        # Validate required fields
-        required_fields = ['name', 'version', 'username', 'password']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({'error': f'Missing required field: {field}'}), 400
+        # Process additional network interfaces from form data
+        additional_networks = []
+        i = 0
+        while f'nic_name_{i}' in data:
+            if data.get(f'nic_name_{i}') and data.get(f'nic_network_{i}'):
+                additional_networks.append({
+                    'name': data[f'nic_name_{i}'],
+                    'network': data[f'nic_network_{i}'],
+                    'ip': data.get(f'nic_ip_{i}'),
+                    'subnet': data.get(f'nic_subnet_{i}')
+                })
+            i += 1
         
-        # Generate configuration
+        if additional_networks:
+            data['additional_networks'] = additional_networks
+        
+        # Validate configuration first
+        validation_result = config_generator.validate_config(data)
+        if not validation_result['valid']:
+            return jsonify({
+                'success': False,
+                'error': 'Configuration validation failed',
+                'validation': validation_result
+            }), 400
+        
+        # Generate configuration files
         docker_compose = config_generator.generate_docker_compose(data)
         env_file = config_generator.generate_env_file(data)
         
+        # Save files (optional)
+        config_generator.save_config_files(data)
+        
         return jsonify({
+            'success': True,
             'docker_compose': docker_compose,
             'env_file': env_file,
-            'success': True
+            'container_name': data.get('name', 'windows'),
+            'validation': validation_result
         })
         
     except Exception as e:
         logging.error(f"Error generating config: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/download-config', methods=['POST'])
 def download_config():
