@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+
+{% block title %}Configuration Wizard - DokWinterface{% endblock %}
+
+{% block head %}
+<link href="{{ url_for('static', filename='js/wizard.js') }}" rel="preload" as="script">
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="wizard-header text-center mb-4">
+            <h2><i class="fas fa-magic me-2"></i>Windows Container Configuration Wizard</h2>
+            <p class="text-muted">Create and customize your Dockur Windows container deployment</p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <!-- Progress Bar -->
+        <div class="progress-container mb-4">
+            <div class="progress">
+                <div class="progress-bar bg-danger" role="progressbar" style="width: 20%" id="wizardProgress"></div>
+            </div>
+            <div class="progress-steps">
+                <div class="step active" data-step="1">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Basic Info</span>
+                </div>
+                <div class="step" data-step="2">
+                    <i class="fas fa-cogs"></i>
+                    <span>System Config</span>
+                </div>
+                <div class="step" data-step="3">
+                    <i class="fas fa-network-wired"></i>
+                    <span>Network</span>
+                </div>
+                <div class="step" data-step="4">
+                    <i class="fas fa-hdd"></i>
+                    <span>Storage</span>
+                </div>
+                <div class="step" data-step="5">
+                    <i class="fas fa-check"></i>
+                    <span>Review</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wizard Form -->
+        <form id="wizardForm">
+            <!-- Step 1: Basic Information -->
+            <div class="wizard-step active" data-step="1">
+                <div class="card bg-dark-custom border-secondary">
+                    <div class="card-header">
+                        <h5><i class="fas fa-info-circle me-2"></i>Basic Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="containerName" class="form-label">Container Name *</label>
+                                <input type="text" class="form-control bg-dark text-light" id="containerName" name="name" required>
+                                <div class="form-text">Unique identifier for your container</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="windowsVersion" class="form-label">Windows Version *</label>
+                                <select class="form-select bg-dark text-light" id="windowsVersion" name="version" required>
+                                    <option value="">Select Version</option>
+                                    <option value="11">Windows 11</option>
+                                    <option value="10">Windows 10</option>
+                                    <option value="2022">Windows Server 2022</option>
+                                    <option value="2019">Windows Server 2019</option>
+                                    <option value="ltsc2019">Windows 10 LTSC 2019</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="username" class="form-label">Username *</label>
+                                <input type="text" class="form-control bg-dark text-light" id="username" name="username" required>
+                                <div class="form-text">Administrator username for Windows</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="password" class="form-label">Password *</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control bg-dark text-light" id="password" name="password" required>
+                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('password')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="form-text">Strong password recommended (min 8 characters)</div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="language" class="form-label">Language</label>
+                                <select class="form-select bg-dark text-light" id="language" name="language">
+                                    <option value="en-US">English (US)</option>
+                                    <option value="en-GB">English (UK)</option>
+                                    <option value="es-ES">Spanish</option>
+                                    <option value="fr-FR">French</option>
+                                    <option value="de-DE">German</option>
+                                    <option value="ja-JP">Japanese</option>
+                                    <option value="zh-CN">Chinese (Simplified)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="keyboard" class="form-label">Keyboard Layout</label>
+                                <select class="form-select bg-dark text-light" id="keyboard" name="keyboard">
+                                    <option value="us">US</option>
+                                    <option value="uk">UK</option>
+                                    <option value="es">Spanish</option>
+                                    <option value="fr">French</option>
+                                    <option value="de">German</option>
+                                    <option value="ja">Japanese</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: System Configuration -->
+            <div class="wizard-step" data-step="2">
+                <div class="card bg-dark-custom border-secondary">
+                    <div class="card-header">
+                        <h5><i class="fas fa-cogs me-2"></i>System Configuration</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="cpuCores" class="form-label">CPU Cores</label>
+                                <select class="form-select bg-dark text-light" id="cpuCores" name="cpu_cores">
+                                    <option value="2">2 Cores</option>
+                                    <option value="4" selected>4 Cores</option>
+                                    <option value="6">6 Cores</option>
+                                    <option value="8">8 Cores</option>
+                                    <option value="12">12 Cores</option>
+                                    <option value="16">16 Cores</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="ramSize" class="form-label">RAM Size (GB)</label>
+                                <select class="form-select bg-dark text-light" id="ramSize" name="ram_size">
+                                    <option value="2">2 GB</option>
+                                    <option value="4" selected>4 GB</option>
+                                    <option value="6">6 GB</option>
+                                    <option value="8">8 GB</option>
+                                    <option value="12">12 GB</option>
+                                    <option value="16">16 GB</option>
+                                    <option value="24">24 GB</option>
+                                    <option value="32">32 GB</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="diskSize" class="form-label">Disk Size (GB)</label>
+                                <input type="number" class="form-control bg-dark text-light" id="diskSize" name="disk_size" min="20" max="1000" value="40">
+                                <div class="form-text">Minimum 20GB, recommended 40GB+</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch mt-4">
+                                    <input class="form-check-input" type="checkbox" id="enableKvm" name="enable_kvm" checked>
+                                    <label class="form-check-label" for="enableKvm">
+                                        Enable Hardware Acceleration (KVM)
+                                    </label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="debugMode" name="debug">
+                                    <label class="form-check-label" for="debugMode">
+                                        Enable Debug Mode
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Network Configuration -->
+            <div class="wizard-step" data-step="3">
+                <div class="card bg-dark-custom border-secondary">
+                    <div class="card-header">
+                        <h5><i class="fas fa-network-wired me-2"></i>Network Configuration</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="rdpPort" class="form-label">RDP Port</label>
+                                <input type="number" class="form-control bg-dark text-light" id="rdpPort" name="rdp_port" min="1024" max="65535" value="3389">
+                                <div class="form-text">Remote Desktop Protocol port</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="vncPort" class="form-label">VNC Port</label>
+                                <input type="number" class="form-control bg-dark text-light" id="vncPort" name="vnc_port" min="1024" max="65535" value="8006">
+                                <div class="form-text">Web-based VNC access port</div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label for="networkMode" class="form-label">Network Mode</label>
+                                <select class="form-select bg-dark text-light" id="networkMode" name="network_mode">
+                                    <option value="">Default (Bridge)</option>
+                                    <option value="host">Host Network</option>
+                                    <option value="none">No Network</option>
+                                </select>
+                                <div class="form-text">Network isolation mode for the container</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: Storage Configuration -->
+            <div class="wizard-step" data-step="4">
+                <div class="card bg-dark-custom border-secondary">
+                    <div class="card-header">
+                        <h5><i class="fas fa-hdd me-2"></i>Storage Configuration</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label for="dataVolume" class="form-label">Data Volume (Optional)</label>
+                                <input type="text" class="form-control bg-dark text-light" id="dataVolume" name="data_volume" placeholder="/host/path">
+                                <div class="form-text">Host directory to mount as data storage</div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Additional Volume Mounts</label>
+                                <div id="volumeContainer">
+                                    <div class="volume-mount mb-2">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control bg-dark text-light" placeholder="Host path" data-volume-type="host">
+                                            <span class="input-group-text">:</span>
+                                            <input type="text" class="form-control bg-dark text-light" placeholder="Container path" data-volume-type="container">
+                                            <button class="btn btn-outline-danger" type="button" onclick="removeVolumeMount(this)">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="addVolumeMount()">
+                                    <i class="fas fa-plus me-1"></i>Add Volume Mount
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5: Review & Generate -->
+            <div class="wizard-step" data-step="5">
+                <div class="card bg-dark-custom border-secondary">
+                    <div class="card-header">
+                        <h5><i class="fas fa-check me-2"></i>Review Configuration</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="configReview" class="mb-3">
+                            <!-- Configuration review will be populated here -->
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Review your configuration above. You can generate Docker files or get AI assistance for optimization.
+                        </div>
+
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button type="button" class="btn btn-danger" onclick="generateConfig()">
+                                <i class="fas fa-file-code me-1"></i>Generate Docker Files
+                            </button>
+                            <button type="button" class="btn btn-outline-light" onclick="validateWithAI()">
+                                <i class="fas fa-robot me-1"></i>Validate with AI
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="downloadConfig()">
+                                <i class="fas fa-download me-1"></i>Download Config
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Generated Files Display -->
+                <div id="generatedFiles" class="mt-4" style="display: none;">
+                    <div class="card bg-dark-custom border-secondary">
+                        <div class="card-header">
+                            <h5><i class="fas fa-file-code me-2"></i>Generated Configuration Files</h5>
+                        </div>
+                        <div class="card-body">
+                            <ul class="nav nav-tabs nav-fill mb-3" id="filesTab" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active bg-dark text-light" id="docker-compose-tab" data-bs-toggle="tab" data-bs-target="#docker-compose-content" type="button">
+                                        docker-compose.yml
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link bg-dark text-light" id="env-file-tab" data-bs-toggle="tab" data-bs-target="#env-file-content" type="button">
+                                        .env
+                                    </button>
+                                </li>
+                            </ul>
+                            <div class="tab-content" id="filesTabContent">
+                                <div class="tab-pane fade show active" id="docker-compose-content" role="tabpanel">
+                                    <pre class="bg-dark text-light p-3 rounded"><code id="dockerComposeCode"></code></pre>
+                                    <button class="btn btn-outline-light btn-sm" onclick="copyToClipboard('dockerComposeCode')">
+                                        <i class="fas fa-copy me-1"></i>Copy
+                                    </button>
+                                </div>
+                                <div class="tab-pane fade" id="env-file-content" role="tabpanel">
+                                    <pre class="bg-dark text-light p-3 rounded"><code id="envFileCode"></code></pre>
+                                    <button class="btn btn-outline-light btn-sm" onclick="copyToClipboard('envFileCode')">
+                                        <i class="fas fa-copy me-1"></i>Copy
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Buttons -->
+            <div class="wizard-navigation mt-4">
+                <button type="button" class="btn btn-secondary" id="prevBtn" onclick="previousStep()" style="display: none;">
+                    <i class="fas fa-arrow-left me-1"></i>Previous
+                </button>
+                <button type="button" class="btn btn-danger" id="nextBtn" onclick="nextStep()">
+                    Next<i class="fas fa-arrow-right ms-1"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- AI Validation Modal -->
+<div class="modal fade" id="aiValidationModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark-custom">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-robot me-2"></i>AI Configuration Analysis
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="aiAnalysisContent">
+                    <div class="text-center">
+                        <div class="spinner-border text-danger" role="status">
+                            <span class="visually-hidden">Analyzing...</span>
+                        </div>
+                        <p class="mt-2">AI is analyzing your configuration...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/wizard.js') }}"></script>
+{% endblock %}

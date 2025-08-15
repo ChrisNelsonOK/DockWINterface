@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - DokWinterface{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="hero-section text-center py-5 mb-5">
+            <div class="hero-content">
+                <i class="fas fa-docker hero-icon mb-3"></i>
+                <h1 class="hero-title">DokWinterface</h1>
+                <p class="hero-subtitle">Modern Windows Container Management Platform</p>
+                <div class="hero-buttons mt-4">
+                    <a href="{{ url_for('wizard') }}" class="btn btn-danger btn-lg me-3">
+                        <i class="fas fa-magic me-2"></i>Start Configuration
+                    </a>
+                    <a href="{{ url_for('chat') }}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-robot me-2"></i>AI Assistant
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Quick Stats -->
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="stats-number" id="totalConfigs">0</h3>
+                        <p class="stats-label">Configurations</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="fas fa-cogs"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="stats-number" id="activeContainers">0</h3>
+                        <p class="stats-label">Active Containers</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="fas fa-play-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="stats-number" id="totalDeployments">0</h3>
+                        <p class="stats-label">Deployments</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="fas fa-server"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="stats-number" id="aiQueries">0</h3>
+                        <p class="stats-label">AI Queries</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Quick Actions -->
+    <div class="col-lg-8 mb-4">
+        <div class="card bg-dark-custom border-secondary">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <a href="{{ url_for('wizard') }}" class="action-card text-decoration-none">
+                            <div class="action-content">
+                                <i class="fas fa-magic action-icon"></i>
+                                <div>
+                                    <h6>Configuration Wizard</h6>
+                                    <p class="mb-0">Create new Windows container configuration</p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <a href="{{ url_for('deployments') }}" class="action-card text-decoration-none">
+                            <div class="action-content">
+                                <i class="fas fa-server action-icon"></i>
+                                <div>
+                                    <h6>View Deployments</h6>
+                                    <p class="mb-0">Monitor and manage container deployments</p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <a href="{{ url_for('chat') }}" class="action-card text-decoration-none">
+                            <div class="action-content">
+                                <i class="fas fa-robot action-icon"></i>
+                                <div>
+                                    <h6>AI Assistant</h6>
+                                    <p class="mb-0">Get help with configuration and troubleshooting</p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="action-card" onclick="showQuickTips()">
+                            <div class="action-content">
+                                <i class="fas fa-lightbulb action-icon"></i>
+                                <div>
+                                    <h6>Quick Tips</h6>
+                                    <p class="mb-0">Best practices and helpful hints</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="col-lg-4 mb-4">
+        <div class="card bg-dark-custom border-secondary">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-clock me-2"></i>Recent Activity
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="recentActivity" class="activity-list">
+                    <div class="activity-item">
+                        <div class="activity-icon">
+                            <i class="fas fa-info-circle text-info"></i>
+                        </div>
+                        <div class="activity-content">
+                            <p class="mb-1">Welcome to DokWinterface!</p>
+                            <small class="text-muted">Start by creating your first configuration</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Status -->
+<div class="row">
+    <div class="col-12">
+        <div class="card bg-dark-custom border-secondary">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-heartbeat me-2"></i>System Status
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="status-item">
+                            <div class="status-indicator status-good"></div>
+                            <span>DokWinterface</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="status-item">
+                            <div class="status-indicator" id="dockerStatus"></div>
+                            <span>Docker Service</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="status-item">
+                            <div class="status-indicator" id="aiStatus"></div>
+                            <span>AI Assistant</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="status-item">
+                            <div class="status-indicator status-good"></div>
+                            <span>Configuration Service</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Tips Modal -->
+<div class="modal fade" id="quickTipsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark-custom">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-lightbulb me-2"></i>Quick Tips & Best Practices
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="accordion" id="tipsAccordion">
+                    <div class="accordion-item bg-dark border-secondary">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#tip1">
+                                <i class="fas fa-memory me-2"></i>Resource Configuration
+                            </button>
+                        </h2>
+                        <div id="tip1" class="accordion-collapse collapse show" data-bs-parent="#tipsAccordion">
+                            <div class="accordion-body">
+                                <ul>
+                                    <li>Allocate at least 4GB of RAM for Windows containers</li>
+                                    <li>Provide 2-4 CPU cores for better performance</li>
+                                    <li>Ensure at least 40GB disk space for Windows installation</li>
+                                    <li>Monitor resource usage during deployment</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item bg-dark border-secondary">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#tip2">
+                                <i class="fas fa-shield-alt me-2"></i>Security Best Practices
+                            </button>
+                        </h2>
+                        <div id="tip2" class="accordion-collapse collapse" data-bs-parent="#tipsAccordion">
+                            <div class="accordion-body">
+                                <ul>
+                                    <li>Use strong passwords (minimum 12 characters)</li>
+                                    <li>Avoid exposing unnecessary ports</li>
+                                    <li>Regularly update container images</li>
+                                    <li>Use volume mounts carefully to avoid data exposure</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item bg-dark border-secondary">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#tip3">
+                                <i class="fas fa-network-wired me-2"></i>Network Configuration
+                            </button>
+                        </h2>
+                        <div id="tip3" class="accordion-collapse collapse" data-bs-parent="#tipsAccordion">
+                            <div class="accordion-body">
+                                <ul>
+                                    <li>Map RDP port (3389) to an available host port</li>
+                                    <li>Use VNC port (8006) for web-based access</li>
+                                    <li>Consider using a reverse proxy for HTTPS</li>
+                                    <li>Configure firewall rules appropriately</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Dashboard specific JavaScript
+    document.addEventListener('DOMContentLoaded', function() {
+        updateSystemStatus();
+        loadDashboardStats();
+        startStatusUpdates();
+    });
+
+    function updateSystemStatus() {
+        // Check AI service status
+        const aiStatusEl = document.getElementById('aiStatus');
+        const openaiKey = localStorage.getItem('openai_api_key');
+        
+        if (openaiKey) {
+            aiStatusEl.className = 'status-indicator status-good';
+        } else {
+            aiStatusEl.className = 'status-indicator status-warning';
+        }
+
+        // Check Docker status (simulated for demo)
+        const dockerStatusEl = document.getElementById('dockerStatus');
+        dockerStatusEl.className = 'status-indicator status-good';
+    }
+
+    function loadDashboardStats() {
+        // Load stats from localStorage or initialize
+        const stats = {
+            totalConfigs: localStorage.getItem('total_configs') || 0,
+            activeContainers: localStorage.getItem('active_containers') || 0,
+            totalDeployments: localStorage.getItem('total_deployments') || 0,
+            aiQueries: localStorage.getItem('ai_queries') || 0
+        };
+
+        document.getElementById('totalConfigs').textContent = stats.totalConfigs;
+        document.getElementById('activeContainers').textContent = stats.activeContainers;
+        document.getElementById('totalDeployments').textContent = stats.totalDeployments;
+        document.getElementById('aiQueries').textContent = stats.aiQueries;
+    }
+
+    function startStatusUpdates() {
+        // Update stats every 30 seconds
+        setInterval(updateSystemStatus, 30000);
+    }
+
+    function showQuickTips() {
+        new bootstrap.Modal(document.getElementById('quickTipsModal')).show();
+    }
+</script>
+{% endblock %}

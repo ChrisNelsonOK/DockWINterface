@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}AI Assistant - DokWinterface{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="chat-header text-center mb-4">
+            <h2><i class="fas fa-robot me-2"></i>AI Assistant</h2>
+            <p class="text-muted">Get expert help with Windows container configuration and troubleshooting</p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <!-- Chat Container -->
+        <div class="card bg-dark-custom border-secondary chat-container">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-comments me-2"></i>Chat with AI Assistant
+                    </h5>
+                    <div>
+                        <button class="btn btn-outline-light btn-sm" onclick="clearChat()">
+                            <i class="fas fa-trash me-1"></i>Clear Chat
+                        </button>
+                        <button class="btn btn-outline-light btn-sm" onclick="exportChat()">
+                            <i class="fas fa-download me-1"></i>Export
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <!-- Chat Messages -->
+                <div class="chat-messages" id="chatMessages">
+                    <div class="chat-message ai-message">
+                        <div class="message-avatar">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="message-content">
+                            <div class="message-header">
+                                <span class="message-author">DokWinterface AI</span>
+                                <span class="message-time">Now</span>
+                            </div>
+                            <div class="message-text">
+                                Hello! I'm your AI assistant for Windows container management. I can help you with:
+                                <ul class="mt-2">
+                                    <li>Configuring Dockur Windows containers</li>
+                                    <li>Troubleshooting deployment issues</li>
+                                    <li>Optimizing performance and security</li>
+                                    <li>Best practices and recommendations</li>
+                                </ul>
+                                How can I assist you today?
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Chat Input -->
+                <div class="chat-input-container">
+                    <form id="chatForm" class="d-flex">
+                        <div class="input-group">
+                            <textarea 
+                                class="form-control bg-dark text-light" 
+                                id="messageInput" 
+                                placeholder="Ask me anything about Windows containers..." 
+                                rows="1"
+                                style="resize: none; max-height: 120px;"
+                                required></textarea>
+                            <button class="btn btn-danger" type="submit" id="sendButton">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card bg-dark-custom border-secondary">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Questions</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap gap-2">
+                            <button class="btn btn-outline-light btn-sm" onclick="askQuickQuestion('How do I configure Windows 11 container with 8GB RAM?')">
+                                Windows 11 Setup
+                            </button>
+                            <button class="btn btn-outline-light btn-sm" onclick="askQuickQuestion('What are the minimum system requirements for Windows containers?')">
+                                System Requirements
+                            </button>
+                            <button class="btn btn-outline-light btn-sm" onclick="askQuickQuestion('How to enable RDP access to Windows container?')">
+                                RDP Configuration
+                            </button>
+                            <button class="btn btn-outline-light btn-sm" onclick="askQuickQuestion('Container is not starting, how to troubleshoot?')">
+                                Troubleshooting
+                            </button>
+                            <button class="btn btn-outline-light btn-sm" onclick="askQuickQuestion('Best practices for Windows container security?')">
+                                Security Tips
+                            </button>
+                            <button class="btn btn-outline-light btn-sm" onclick="askQuickQuestion('How to persist data in Windows containers?')">
+                                Data Persistence
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Status -->
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="ai-status-container">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="ai-status-info">
+                            <span id="aiStatus" class="ai-status-indicator"></span>
+                            <span id="aiStatusText" class="ms-2">Checking AI service...</span>
+                        </div>
+                        <div class="ai-stats">
+                            <small class="text-muted">
+                                <i class="fas fa-comment me-1"></i>
+                                <span id="messageCount">0</span> messages
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration Panel -->
+    <div class="col-lg-4">
+        <div class="card bg-dark-custom border-secondary">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-cog me-2"></i>AI Configuration</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="aiProvider" class="form-label">AI Provider</label>
+                    <select class="form-select bg-dark text-light" id="aiProvider">
+                        <option value="openai">OpenAI (GPT-4)</option>
+                        <option value="anthropic" disabled>Anthropic (Claude) - Coming Soon</option>
+                        <option value="gemini" disabled>Google Gemini - Coming Soon</option>
+                        <option value="ollama" disabled>Ollama (Local) - Coming Soon</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="apiKeyInput" class="form-label">API Key</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control bg-dark text-light" id="apiKeyInput" placeholder="Enter your API key">
+                        <button class="btn btn-outline-secondary" type="button" onclick="toggleApiKeyVisibility()">
+                            <i class="fas fa-eye" id="apiKeyToggleIcon"></i>
+                        </button>
+                    </div>
+                    <div class="form-text">Your API key is stored locally and never sent to our servers</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="contextMode" class="form-label">Context Mode</label>
+                    <select class="form-select bg-dark text-light" id="contextMode">
+                        <option value="conversational">Conversational</option>
+                        <option value="technical">Technical Expert</option>
+                        <option value="troubleshooting">Troubleshooting Focus</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-danger w-100" onclick="saveAIConfig()">
+                    <i class="fas fa-save me-1"></i>Save Configuration
+                </button>
+            </div>
+        </div>
+
+        <!-- Context Information -->
+        <div class="card bg-dark-custom border-secondary mt-3">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Context Information</h6>
+            </div>
+            <div class="card-body">
+                <div class="context-item">
+                    <label class="form-check-label">
+                        <input class="form-check-input me-2" type="checkbox" id="includeSystemInfo" checked>
+                        Include system information
+                    </label>
+                </div>
+                <div class="context-item">
+                    <label class="form-check-label">
+                        <input class="form-check-input me-2" type="checkbox" id="includeCurrentConfig">
+                        Include current configuration
+                    </label>
+                </div>
+                <div class="context-item">
+                    <label class="form-check-label">
+                        <input class="form-check-input me-2" type="checkbox" id="includeErrorLogs">
+                        Include recent error logs
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Topics -->
+        <div class="card bg-dark-custom border-secondary mt-3">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-history me-2"></i>Recent Topics</h6>
+            </div>
+            <div class="card-body">
+                <div id="recentTopics" class="recent-topics">
+                    <div class="recent-topic-item">
+                        <small class="text-muted">No recent conversations</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+{% endblock %}
