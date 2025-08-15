@@ -43,8 +43,9 @@ function nextStep() {
             currentStep++;
             updateWizard();
             
-            // Special handling for review step
+            // Special handling for review step - save all data first
             if (currentStep === 5) {
+                saveAllStepData();
                 generateConfigurationReview();
             }
         }
@@ -76,6 +77,7 @@ function goToStep(step) {
             updateWizard();
             
             if (currentStep === 5) {
+                saveAllStepData();
                 generateConfigurationReview();
             }
         }
@@ -341,10 +343,12 @@ function saveCurrentStepData() {
     
     const inputs = currentStepElement.querySelectorAll('input, select, textarea');
     inputs.forEach(input => {
-        if (input.type === 'checkbox') {
-            formData[input.name] = input.checked;
-        } else {
-            formData[input.name] = input.value;
+        if (input.name) { // Only save if input has a name attribute
+            if (input.type === 'checkbox') {
+                formData[input.name] = input.checked;
+            } else {
+                formData[input.name] = input.value;
+            }
         }
     });
     
@@ -352,6 +356,30 @@ function saveCurrentStepData() {
     if (currentStep === 4) {
         formData.additional_volumes = collectVolumeMounts();
     }
+    
+    // Auto-save to localStorage
+    localStorage.setItem('wizardFormData', JSON.stringify(formData));
+}
+
+// Save data from ALL steps, not just current step
+function saveAllStepData() {
+    const allSteps = document.querySelectorAll('.wizard-step');
+    allSteps.forEach(stepElement => {
+        const inputs = stepElement.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            if (input.name) { // Only save if input has a name attribute
+                if (input.type === 'checkbox') {
+                    formData[input.name] = input.checked;
+                } else {
+                    formData[input.name] = input.value;
+                }
+            }
+        });
+    });
+    
+    // Save volume mounts and network interfaces
+    formData.additional_volumes = collectVolumeMounts();
+    formData.additional_networks = collectNetworkInterfaces();
     
     // Auto-save to localStorage
     localStorage.setItem('wizardFormData', JSON.stringify(formData));
@@ -464,16 +492,23 @@ function populateVolumeMounts(volumes) {
 
 // Configuration Generation and Review
 function generateConfigurationReview() {
-    saveCurrentStepData();
+    // Save data from ALL steps before generating review
+    saveAllStepData();
     
     const reviewContainer = document.getElementById('configReview');
     if (!reviewContainer) return;
+    
+    // Debug: Log formData to console to help troubleshoot
+    console.log('Form data for review:', formData);
     
     const config = {
         ...formData,
         additional_volumes: collectVolumeMounts(),
         additional_networks: collectNetworkInterfaces()
     };
+    
+    // Debug: Log config to console
+    console.log('Config for review:', config);
     
     const reviewHTML = `
         <div class="row">
@@ -539,7 +574,8 @@ function generateConfigurationReview() {
 }
 
 async function generateConfig() {
-    saveCurrentStepData();
+    // Save all step data before generating config
+    saveAllStepData();
     
     // Add rollback protection settings if enabled
     const enableRollback = document.getElementById('enableRollback');
@@ -554,6 +590,9 @@ async function generateConfig() {
         rollback_timeout: rollbackTimeout ? parseInt(rollbackTimeout.value) : 300,
         rollback_monitoring: rollbackMonitoring ? rollbackMonitoring.value : 'connectivity'
     };
+    
+    // Debug: Log final config
+    console.log('Final config for generation:', config);
     
     // Validate configuration before generating
     const validationResult = await validateConfiguration(config);
