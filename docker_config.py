@@ -336,7 +336,7 @@ class DockerConfigGenerator:
     def generate_macvlan_setup_script(self, config: Dict[str, Any]) -> str:
         """Generate script to create macvlan network"""
         network_name = config.get('macvlan_network_name', 'macvlan-net')
-        parent_interface = config.get('macvlan_parent_interface', 'eth0')
+        parent_interface = config.get('macvlan_parent', 'eth0')
         subnet = config.get('macvlan_subnet', '192.168.1.0/24')
         gateway = config.get('macvlan_gateway', '192.168.1.1')
         ip_range = config.get('macvlan_ip_range', '192.168.1.192/27')
@@ -404,7 +404,7 @@ class DockerConfigGenerator:
             if not config.get('macvlan_gateway'):
                 errors.append("Macvlan gateway is required (e.g., 192.168.1.1)")
             
-            if not config.get('macvlan_parent_interface'):
+            if not config.get('macvlan_parent'):
                 errors.append("Parent network interface is required (e.g., eth0)")
             
             # Validate IP format if static IP is provided

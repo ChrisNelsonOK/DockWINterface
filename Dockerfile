@@ -7,25 +7,25 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
+    curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Create application directories with proper permissions
+RUN mkdir -p /var/lib/dokwinterface/snapshots /var/lib/dokwinterface/generated_configs /etc/dokwinterface \
+    && chmod -R 755 /var/lib/dokwinterface /etc/dokwinterface
+
+# Copy requirements first to leverage Docker cache
+COPY requirements.txt .
+
+# Install Python dependencies from requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application files
 COPY . .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir \
-    Flask==3.0.0 \
-    gunicorn==21.2.0 \
-    PyYAML==6.0.1 \
-    openai==1.3.0 \
-    email-validator==2.1.0 \
-    Flask-SQLAlchemy==3.1.1 \
-    psycopg2-binary==2.9.9 \
-    python-dotenv==1.0.0
-
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash app \
-    && chown -R app:app /app
+    && chown -R app:app /app /var/lib/dokwinterface /etc/dokwinterface
 USER app
 
 # Expose port
