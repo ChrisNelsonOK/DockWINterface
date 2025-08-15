@@ -1,4 +1,4 @@
-# DokWinterface Production Dockerfile
+# DockWINterface Production Dockerfile
 FROM python:3.11-slim
 
 # Set working directory

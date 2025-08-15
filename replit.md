@@ -1,6 +1,6 @@
 # Overview
 
-DokWinterface is a production-ready, comprehensive web-based management platform for Windows containers using the Dockur project. It provides an intuitive interface for configuring, deploying, and managing Windows containers with Docker. The application features an advanced configuration wizard, deployment management dashboard, enterprise networking capabilities, SNMP/WMI services integration, centralized logging server configuration, and an AI-powered assistant for expert guidance.
+DockWINterface is a production-ready, comprehensive web-based management platform for Windows containers using the Dockur project. It provides an intuitive interface for configuring, deploying, and managing Windows containers with Docker. The application features an advanced configuration wizard, deployment management dashboard, enterprise networking capabilities, SNMP/WMI services integration, centralized logging server configuration, and an AI-powered assistant for expert guidance.
 
 ## Current Status: Production Ready (v1.0.0)
 - ✅ All core features implemented and tested

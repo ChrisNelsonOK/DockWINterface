@@ -1,4 +1,4 @@
-// DokWinterface Main JavaScript
+// DockWINterface Main JavaScript
 // Common functionality and utilities
 
 // Global variables
@@ -332,7 +332,7 @@ async function makeRequest(url, options = {}) {
 }
 
 // Export functions for use in other modules
-window.DokWinterface = {
+window.DockWINterface = {
     showNotification,
     copyToClipboard,
     togglePassword,

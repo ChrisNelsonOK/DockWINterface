@@ -1,4 +1,4 @@
-// DokWinterface AI Chat JavaScript
+// DockWINterface AI Chat JavaScript
 
 // Chat state
 let chatHistory = [];
@@ -211,7 +211,7 @@ function addMessageToChat(sender, content) {
     messageDiv.className = `chat-message ${sender}-message`;
     
     const timestamp = new Date().toLocaleTimeString();
-    const authorName = sender === 'user' ? 'You' : 'DokWinterface AI';
+    const authorName = sender === 'user' ? 'You' : 'DockWINterface AI';
     const avatarIcon = sender === 'user' ? 'fas fa-user' : 'fas fa-robot';
     
     messageDiv.innerHTML = `
@@ -278,7 +278,7 @@ function showTypingIndicator() {
         </div>
         <div class="message-content">
             <div class="message-header">
-                <span class="message-author">DokWinterface AI</span>
+                <span class="message-author">DockWINterface AI</span>
                 <span class="message-time">typing...</span>
             </div>
             <div class="message-text">

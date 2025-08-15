@@ -1,0 +1,19 @@
+{
+  "name": "test-trigger-container",
+  "version": "latest",
+  "username": "testuser2",
+  "password": "testpass456",
+  "windows_version": "win10",
+  "ram_size": 4,
+  "cpu_cores": 2,
+  "disk_size": 32,
+  "network_mode": "bridge",
+  "enable_gpu": false,
+  "enable_audio": false,
+  "enable_usb": false,
+  "mount_paths": [],
+  "additional_env": {},
+  "enable_rollback": true,
+  "rollback_timeout": 10,
+  "rollback_monitoring": "both"
+}

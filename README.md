@@ -1,8 +1,8 @@
-# DokWinterface
+# DockWINterface
 
 **Production-ready Windows Container Management Platform**
 
-DokWinterface is a comprehensive web-based management platform for Windows containers using the Dockur project. It provides an intuitive interface for configuring, deploying, and managing Windows containers with Docker, featuring advanced networking, enterprise monitoring, and AI-powered assistance.
+DockWINterface is a comprehensive web-based management platform for Windows containers using the Dockur project. It provides an intuitive interface for configuring, deploying, and managing Windows containers with Docker, featuring advanced networking, enterprise monitoring, and AI-powered assistance.
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![Status](https://img.shields.io/badge/status-production%20ready-green.svg)
@@ -126,7 +126,7 @@ python -c "import secrets; print(secrets.token_hex(32))"
 
 ## 📦 Generated Configurations
 
-DokWinterface generates production-ready configurations:
+DockWINterface generates production-ready configurations:
 
 ### Docker Compose Features
 - Windows container orchestration
@@ -202,4 +202,4 @@ For support and questions:
 
 ---
 
-**DokWinterface** - Making Windows container management simple and powerful.
+**DockWINterface** - Making Windows container management simple and powerful.

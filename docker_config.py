@@ -1,60 +1,128 @@
 import os
-import yaml
 import json
-from typing import Dict, Any, List
+import yaml
 import logging
+from typing import Dict, Any, List
 
 class DockerConfigGenerator:
     def __init__(self):
         self.output_dir = "generated_configs"
         self.ensure_output_dir()
-    
+
     def ensure_output_dir(self):
         """Ensure output directory exists"""
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
-    
+
     def generate_docker_compose(self, config: Dict[str, Any]) -> str:
         """Generate docker-compose.yml content for Dockur Windows"""
-        
+        # Basic service configuration
+        service_config = {
+            'image': f"dockurr/windows:{config.get('version', 'latest')}",
+            'container_name': config.get('name', 'windows'),
+            'environment': self._generate_environment_vars(config),
+            'devices': ['/dev/kvm'],
+            'cap_add': ['NET_ADMIN'],
+            'stop_grace_period': '2m',
+            'restart': 'on-failure'
+        }
+
+        # Add ports only if not using macvlan
+        # (macvlan exposes all ports by default)
+        if config.get('network_mode') != 'macvlan':
+            service_config['ports'] = [
+                f"{config.get('rdp_port', '3389')}:3389/tcp",
+                f"{config.get('vnc_port', '8006')}:8006/tcp"
+            ]
+
+        # Add DHCP-specific devices and cgroup rules for macvlan
+        is_macvlan_dhcp = (config.get('network_mode') == 'macvlan' and
+                           config.get('macvlan_dhcp'))
+        if is_macvlan_dhcp:
+            service_config['devices'].append('/dev/vhost-net')
+            service_config['device_cgroup_rules'] = ['c *:* rwm']
+
         compose_config = {
             'version': '3.8',
             'services': {
-                config.get('name', 'windows'): {
-                    'image': f"dockurr/windows:{config.get('version', 'latest')}",
-                    'container_name': config.get('name', 'windows'),
-                    'environment': self._generate_environment_vars(config),
-                    'devices': ['/dev/kvm'],
-                    'cap_add': ['NET_ADMIN'],
-                    'ports': [
-                        f"{config.get('rdp_port', '3389')}:3389/tcp",
-                        f"{config.get('vnc_port', '8006')}:8006/tcp"
-                    ],
-                    'stop_grace_period': '2m',
-                    'restart': 'on-failure'
-                }
+                config.get('name', 'windows'): service_config
             }
         }
-        
+
         # Add volumes if specified
         volumes = self._generate_volumes(config)
         if volumes:
-            compose_config['services'][config.get('name', 'windows')]['volumes'] = volumes
-        
+            service = compose_config['services'][config.get('name', 'windows')]
+            service['volumes'] = volumes
+
         # Add network configuration
         networks = self._generate_networks(config)
         if networks:
             if 'networks' not in compose_config:
                 compose_config['networks'] = {}
             compose_config['networks'].update(networks)
-            
+
             # Connect service to networks
             service_networks = self._generate_service_networks(config)
             if service_networks:
-                compose_config['services'][config.get('name', 'windows')]['networks'] = service_networks
-        elif config.get('network_mode') and config.get('network_mode') != 'static':
-            compose_config['services'][config.get('name', 'windows')]['network_mode'] = config['network_mode']
-        
+                service_name = config.get('name', 'windows')
+                service = compose_config['services'][service_name]
+                service['networks'] = service_networks
+        elif config.get('network_mode') == 'host':
+            service_config['network_mode'] = 'host'
+        elif config.get('network_mode') == 'static':
+            # Static IP configuration
+            if config.get('static_ip'):
+                compose_config['networks'] = {
+                    'dokwinterface_net': {
+                        'driver': 'bridge',
+                        'ipam': {
+                            'config': [{
+                                'subnet': config.get('subnet', '172.20.0.0/16'),
+                                'gateway': config.get('gateway', '172.20.0.1')
+                            }]
+                        }
+                    }
+                }
+                service_config['networks'] = {
+                    'dokwinterface_net': {
+                        'ipv4_address': config['static_ip']
+                    }
+                }
+        elif config.get('network_mode') == 'macvlan':
+            # Macvlan network configuration
+            network_name = config.get('macvlan_network_name', 'macvlan_net')
+            service_config['networks'] = [network_name]
+            
+            # If container IP is specified, use it
+            if config.get('macvlan_container_ip'):
+                service_config['networks'] = {
+                    network_name: {
+                        'ipv4_address': config['macvlan_container_ip']
+                    }
+                }
+        elif config.get('network_mode') == 'none':
+            service_config['network_mode'] = 'none'
+        elif config.get('network_mode') == 'macvlan':
+            # For macvlan, reference the external network
+            network_name = config.get('macvlan_network_name', 'macvlan-net')
+            service = compose_config['services'][config.get('name', 'windows')]
+            service['networks'] = {network_name: {}}
+            if config.get('macvlan_ip'):
+                ipv4 = config['macvlan_ip']
+                service['networks'][network_name]['ipv4_address'] = ipv4
+
+            # Add external network reference
+            compose_config['networks'] = {
+                network_name: {
+                    'external': True
+                }
+            }
+        elif (config.get('network_mode') and
+              config.get('network_mode') not in ['static', 'macvlan']):
+            service = compose_config['services'][config.get('name', 'windows')]
+            service['network_mode'] = config['network_mode']
+
         # Add resource limits if specified
         if config.get('cpu_limit') or config.get('memory_limit'):
             deploy_config = {}
@@ -65,49 +133,56 @@ class DockerConfigGenerator:
             if config.get('memory_limit'):
                 if 'resources' not in deploy_config:
                     deploy_config['resources'] = {'limits': {}}
-                deploy_config['resources']['limits']['memory'] = f"{config['memory_limit']}G"
-            
-            compose_config['services'][config.get('name', 'windows')]['deploy'] = deploy_config
-        
-        return yaml.dump(compose_config, default_flow_style=False, sort_keys=False)
-    
+                mem_limit = config['memory_limit']
+                deploy_config['resources']['limits']['memory'] = mem_limit
+            service = compose_config['services'][config.get('name', 'windows')]
+            service['deploy'] = deploy_config
+
+        return yaml.dump(compose_config, default_flow_style=False)
+
     def _generate_environment_vars(self, config: Dict[str, Any]) -> List[str]:
         """Generate environment variables for the container"""
         env_vars = []
-        
+
         # Basic Windows configuration
         if config.get('username'):
             env_vars.append(f"USERNAME={config['username']}")
         if config.get('password'):
             env_vars.append(f"PASSWORD={config['password']}")
-        
-        # Language and keyboard settings
+
+        # Version selection and keyboard settings
         if config.get('language'):
             env_vars.append(f"LANGUAGE={config['language']}")
         if config.get('keyboard'):
             env_vars.append(f"KEYBOARD={config['keyboard']}")
-        
+
         # System resources
         if config.get('cpu_cores'):
             env_vars.append(f"CPU_CORES={config['cpu_cores']}")
         if config.get('ram_size'):
-            env_vars.append(f"RAM_SIZE={config['ram_size']}G")
-        
-        # Disk configuration
+            env_vars.append(f"VERSION={config['version']}")
+
+        # Storage configuration
         if config.get('disk_size'):
-            env_vars.append(f"DISK_SIZE={config['disk_size']}G")
-        
+            env_vars.append(f"SCREEN={config['screen_resolution']}")
+
         # Additional options
         if config.get('enable_kvm', True):
             env_vars.append("KVM=Y")
-        
+
         if config.get('debug', False):
             env_vars.append("DEBUG=Y")
-        
+
         # Network configuration
         if config.get('dns_servers'):
             env_vars.append(f"DNS={config['dns_servers']}")
         
+        # Macvlan DHCP mode
+        is_macvlan_dhcp = (config.get('network_mode') == 'macvlan' and
+                           config.get('macvlan_dhcp'))
+        if is_macvlan_dhcp:
+            env_vars.append("DHCP=Y")
+
         # Static IP configuration
         if config.get('network_mode') == 'static':
             if config.get('static_ip'):
@@ -195,6 +270,7 @@ class DockerConfigGenerator:
                     }]
                 }
             }
+        # Note: Macvlan networks are created externally, not in docker-compose
         
         # Additional network interfaces
         if config.get('additional_networks'):
@@ -257,9 +333,51 @@ class DockerConfigGenerator:
         
         return "172.20.0.0/16"  # Fallback subnet
     
+    def generate_macvlan_setup_script(self, config: Dict[str, Any]) -> str:
+        """Generate script to create macvlan network"""
+        network_name = config.get('macvlan_network_name', 'macvlan-net')
+        parent_interface = config.get('macvlan_parent_interface', 'eth0')
+        subnet = config.get('macvlan_subnet', '192.168.1.0/24')
+        gateway = config.get('macvlan_gateway', '192.168.1.1')
+        ip_range = config.get('macvlan_ip_range', '192.168.1.192/27')
+        aux_address = config.get('macvlan_aux_address', '')
+        
+        script = "#!/bin/bash\n\n"
+        script += "# DockWINterface Macvlan Network Setup Script\n"
+        script += f"# Generated for container: {config.get('name', 'windows')}\n\n"
+        
+        script += "# Check if network already exists\n"
+        script += f"if docker network ls | grep -q '{network_name}'; then\n"
+        script += f"  echo 'Network {network_name} already exists'\n"
+        script += "else\n"
+        script += "  echo 'Creating macvlan network...'\n"
+        script += "  docker network create -d macvlan \\\n"
+        script += f"    --subnet={subnet} \\\n"
+        script += f"    --gateway={gateway} \\\n"
+        script += f"    --ip-range={ip_range} \\\n"
+        if aux_address:
+            script += f"    --aux-address='host={aux_address}' \\\n"
+        script += f"    -o parent={parent_interface} \\\n"
+        script += f"    {network_name}\n"
+        script += "fi\n\n"
+        
+        # Add host access configuration if aux_address is provided
+        if aux_address and config.get('macvlan_enable_host_access'):
+            shim_name = f"{network_name}-shim"
+            script += "# Configure host access to macvlan network\n"
+            script += f"echo 'Setting up host access via {shim_name}...'\n"
+            script += f"sudo ip link add {shim_name} link {parent_interface} type macvlan mode bridge\n"
+            script += f"sudo ip addr add {aux_address}/32 dev {shim_name}\n"
+            script += f"sudo ip link set {shim_name} up\n"
+            script += f"sudo ip route add {ip_range} dev {shim_name}\n"
+            script += f"echo 'Host can now communicate with containers via {aux_address}'\n\n"
+        
+        script += "echo 'Macvlan network setup complete!'\n"
+        return script
+    
     def generate_env_file(self, config: Dict[str, Any]) -> str:
         """Generate .env file content"""
-        env_content = "# DokWinterface Generated Environment File\n"
+        env_content = "# DockWINterface Generated Environment File\n"
         env_content += f"# Generated for container: {config.get('name', 'windows')}\n\n"
         
         env_vars = self._generate_environment_vars(config)
@@ -267,12 +385,43 @@ class DockerConfigGenerator:
             env_content += f"{var}\n"
         
         # Additional Docker-specific settings
-        env_content += f"\n# Container Configuration\n"
+        env_content += "\n# Container Configuration\n"
         env_content += f"CONTAINER_NAME={config.get('name', 'windows')}\n"
         env_content += f"RDP_PORT={config.get('rdp_port', '3389')}\n"
         env_content += f"VNC_PORT={config.get('vnc_port', '8006')}\n"
         
         return env_content
+    
+    def validate_macvlan_config(self, config: Dict[str, Any]) -> List[str]:
+        """Validate macvlan-specific configuration"""
+        errors = []
+        
+        if config.get('network_mode') == 'macvlan':
+            # Check required macvlan fields
+            if not config.get('macvlan_subnet'):
+                errors.append("Macvlan subnet is required (e.g., 192.168.1.0/24)")
+            
+            if not config.get('macvlan_gateway'):
+                errors.append("Macvlan gateway is required (e.g., 192.168.1.1)")
+            
+            if not config.get('macvlan_parent_interface'):
+                errors.append("Parent network interface is required (e.g., eth0)")
+            
+            # Validate IP format if static IP is provided
+            if config.get('macvlan_ip'):
+                import re
+                ip_pattern = r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$'
+                if not re.match(ip_pattern, config['macvlan_ip']):
+                    errors.append("Invalid macvlan IP address format")
+            
+            # Validate subnet format
+            if config.get('macvlan_subnet'):
+                import re
+                subnet_pattern = r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2}$'
+                if not re.match(subnet_pattern, config['macvlan_subnet']):
+                    errors.append("Invalid subnet format (use CIDR notation, e.g., 192.168.1.0/24)")
+        
+        return errors
     
     def validate_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Validate configuration parameters"""
@@ -331,6 +480,10 @@ class DockerConfigGenerator:
                 except ValueError:
                     errors.append(f"{port_field} must be a valid port number")
         
+        # Validate macvlan configuration if applicable
+        macvlan_errors = self.validate_macvlan_config(config)
+        errors.extend(macvlan_errors)
+        
         return {
             'valid': len(errors) == 0,
             'errors': errors,
@@ -340,6 +493,9 @@ class DockerConfigGenerator:
     def save_config_files(self, config: Dict[str, Any]):
         """Save generated configuration files to disk"""
         container_name = config.get('name', 'windows')
+        
+        # Ensure output directory exists
+        os.makedirs(self.output_dir, exist_ok=True)
         
         # Generate content
         docker_compose = self.generate_docker_compose(config)
@@ -360,10 +516,24 @@ class DockerConfigGenerator:
         with open(config_path, 'w') as f:
             json.dump(config, f, indent=2)
         
+        # Save macvlan setup script if using macvlan
+        script_path = None
+        if config.get('network_mode') == 'macvlan':
+            macvlan_script = self.generate_macvlan_setup_script(config)
+            script_path = os.path.join(self.output_dir, f"{container_name}-setup-macvlan.sh")
+            with open(script_path, 'w') as f:
+                f.write(macvlan_script)
+            # Make script executable
+            os.chmod(script_path, 0o755)
+        
         logging.info(f"Configuration files saved for {container_name}")
         
-        return {
+        result = {
             'docker_compose_path': compose_path,
             'env_path': env_path,
             'config_path': config_path
         }
+        if script_path:
+            result['macvlan_script_path'] = script_path
+        
+        return result

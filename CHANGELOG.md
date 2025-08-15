@@ -1,6 +1,26 @@
 # Changelog
 
-All notable changes to DokWinterface will be documented in this file.
+All notable changes to DockWINterface will be documented in this file.
+
+## [1.0.1] - 2025-08-15
+
+### Added
+- **requirements.txt** file for traditional pip installations
+- **Unit Tests** for core components:
+  - Comprehensive test suite for DockerConfigGenerator
+  - Full test coverage for AIAssistant with mocked OpenAI API
+- **Enhanced Security**:
+  - SESSION_SECRET minimum length validation (32 characters)
+  - Automatic validation on application startup
+
+### Fixed
+- **Directory Creation**: Automatic creation of `generated_configs` directory if it doesn't exist
+- **Error Handling**: Improved validation and error messages for configuration generation
+
+### Improved
+- **Code Quality**: Added unit tests to ensure reliability of core components
+- **Documentation**: Updated with testing instructions and security requirements
+- **Production Readiness**: Enhanced validation for production deployments
 
 ## [1.0.0] - 2025-08-15
 

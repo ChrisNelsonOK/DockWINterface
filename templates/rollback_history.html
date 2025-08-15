@@ -1,0 +1,552 @@
+{% extends "base.html" %}
+
+{% block title %}Rollback History - DockWINterface{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-header mb-4">
+                <h2><i class="fas fa-history me-2"></i>Rollback History</h2>
+                <p class="text-muted">View and manage deployment rollback checkpoints</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Controls -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <label for="daysFilter" class="form-label">Time Period</label>
+            <select class="form-select bg-dark text-light" id="daysFilter">
+                <option value="1">Last 24 hours</option>
+                <option value="7" selected>Last 7 days</option>
+                <option value="30">Last 30 days</option>
+                <option value="90">Last 90 days</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label for="statusFilter" class="form-label">Status</label>
+            <select class="form-select bg-dark text-light" id="statusFilter">
+                <option value="all">All</option>
+                <option value="active">Active</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="rolled_back">Rolled Back</option>
+                <option value="expired">Expired</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label for="typeFilter" class="form-label">Change Type</label>
+            <select class="form-select bg-dark text-light" id="typeFilter">
+                <option value="all">All Types</option>
+                <option value="container">Container</option>
+                <option value="network">Network</option>
+                <option value="macvlan">Macvlan</option>
+                <option value="config">Configuration</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">&nbsp;</label>
+            <button class="btn btn-danger d-block" onclick="refreshHistory()">
+                <i class="fas fa-sync-alt me-1"></i>Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-dark-custom border-secondary">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Total Checkpoints</h6>
+                    <h3 class="text-light" id="totalCheckpoints">0</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-dark-custom border-success">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Confirmed</h6>
+                    <h3 class="text-success" id="confirmedCount">0</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-dark-custom border-warning">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Active</h6>
+                    <h3 class="text-warning" id="activeCount">0</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-dark-custom border-danger">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Rolled Back</h6>
+                    <h3 class="text-danger" id="rolledBackCount">0</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card bg-dark-custom border-secondary">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-list me-2"></i>Checkpoint History</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Checkpoint ID</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Timeout</th>
+                                    <th>Description</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                <tr>
+                                    <td colspan="7" class="text-center">
+                                        <div class="spinner-border text-danger" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Checkpoint Modal -->
+    <div class="modal fade" id="checkpointModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bg-dark-custom">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-shield-alt me-2"></i>Active Checkpoint
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="checkpointDetails">
+                    <!-- Checkpoint details will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" id="confirmBtn" style="display: none;">
+                        <i class="fas fa-check me-1"></i>Confirm Changes
+                    </button>
+                    <button type="button" class="btn btn-danger" id="rollbackBtn" style="display: none;">
+                        <i class="fas fa-undo me-1"></i>Rollback Now
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .status-badge {
+        font-size: 0.875rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+    }
+    
+    .status-active {
+        background-color: #ffc107;
+        color: #000;
+    }
+    
+    .status-confirmed {
+        background-color: #28a745;
+        color: #fff;
+    }
+    
+    .status-rolled-back {
+        background-color: #dc3545;
+        color: #fff;
+    }
+    
+    .status-expired {
+        background-color: #6c757d;
+        color: #fff;
+    }
+    
+    .countdown-timer {
+        font-family: monospace;
+        font-size: 1.2rem;
+        color: #ffc107;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let historyData = [];
+let activeTimers = {};
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    setupEventListeners();
+    refreshHistory();
+    
+    // Auto-refresh every 30 seconds
+    setInterval(refreshHistory, 30000);
+});
+
+function setupEventListeners() {
+    document.getElementById('daysFilter').addEventListener('change', refreshHistory);
+    document.getElementById('statusFilter').addEventListener('change', filterHistory);
+    document.getElementById('typeFilter').addEventListener('change', filterHistory);
+}
+
+async function refreshHistory() {
+    const days = document.getElementById('daysFilter').value;
+    
+    try {
+        const response = await fetch(`/api/rollback/history?days=${days}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch history');
+        }
+        
+        const result = await response.json();
+        historyData = result.history || [];
+        
+        updateStatistics();
+        filterHistory();
+        
+    } catch (error) {
+        console.error('Error fetching rollback history:', error);
+        showNotification('Failed to load rollback history', 'error');
+    }
+}
+
+function updateStatistics() {
+    let total = historyData.length;
+    let confirmed = 0;
+    let active = 0;
+    let rolledBack = 0;
+    
+    historyData.forEach(checkpoint => {
+        if (checkpoint.confirmed) confirmed++;
+        else if (checkpoint.rolled_back) rolledBack++;
+        else if (checkpoint.monitoring) active++;
+    });
+    
+    document.getElementById('totalCheckpoints').textContent = total;
+    document.getElementById('confirmedCount').textContent = confirmed;
+    document.getElementById('activeCount').textContent = active;
+    document.getElementById('rolledBackCount').textContent = rolledBack;
+}
+
+function filterHistory() {
+    const statusFilter = document.getElementById('statusFilter').value;
+    const typeFilter = document.getElementById('typeFilter').value;
+    
+    let filteredData = historyData;
+    
+    // Apply status filter
+    if (statusFilter !== 'all') {
+        filteredData = filteredData.filter(checkpoint => {
+            if (statusFilter === 'active') return checkpoint.monitoring && !checkpoint.confirmed && !checkpoint.rolled_back;
+            if (statusFilter === 'confirmed') return checkpoint.confirmed;
+            if (statusFilter === 'rolled_back') return checkpoint.rolled_back;
+            if (statusFilter === 'expired') return !checkpoint.monitoring && !checkpoint.confirmed && !checkpoint.rolled_back;
+            return true;
+        });
+    }
+    
+    // Apply type filter
+    if (typeFilter !== 'all') {
+        filteredData = filteredData.filter(checkpoint => {
+            const checkpointType = checkpoint.id.split('_')[0];
+            return checkpointType === typeFilter;
+        });
+    }
+    
+    displayHistory(filteredData);
+}
+
+function displayHistory(data) {
+    const tbody = document.getElementById('historyTableBody');
+    
+    // Clear existing timers
+    Object.values(activeTimers).forEach(timer => clearInterval(timer));
+    activeTimers = {};
+    
+    if (data.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center text-muted">
+                    No rollback checkpoints found
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = data.map(checkpoint => {
+        const status = getCheckpointStatus(checkpoint);
+        const statusBadge = getStatusBadge(status);
+        const created = new Date(checkpoint.created).toLocaleString();
+        const type = checkpoint.id.split('_')[0];
+        
+        let actionsHtml = '';
+        if (status === 'active') {
+            actionsHtml = `
+                <button class="btn btn-sm btn-success me-1" onclick="confirmCheckpoint('${checkpoint.id}')">
+                    <i class="fas fa-check"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="rollbackCheckpoint('${checkpoint.id}')">
+                    <i class="fas fa-undo"></i>
+                </button>
+            `;
+            
+            // Setup countdown timer for active checkpoints
+            setupCountdownTimer(checkpoint);
+        } else {
+            actionsHtml = `
+                <button class="btn btn-sm btn-outline-secondary" onclick="viewCheckpoint('${checkpoint.id}')">
+                    <i class="fas fa-eye"></i>
+                </button>
+            `;
+        }
+        
+        return `
+            <tr>
+                <td><code>${checkpoint.id}</code></td>
+                <td>${type.charAt(0).toUpperCase() + type.slice(1)}</td>
+                <td>${statusBadge}</td>
+                <td>${created}</td>
+                <td>
+                    <span id="timer_${checkpoint.id}">
+                        ${checkpoint.timeout}s
+                    </span>
+                </td>
+                <td>${checkpoint.description || '-'}</td>
+                <td>${actionsHtml}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function getCheckpointStatus(checkpoint) {
+    if (checkpoint.confirmed) return 'confirmed';
+    if (checkpoint.rolled_back) return 'rolled_back';
+    if (checkpoint.monitoring) return 'active';
+    return 'expired';
+}
+
+function getStatusBadge(status) {
+    const badges = {
+        'active': '<span class="badge status-badge status-active">Active</span>',
+        'confirmed': '<span class="badge status-badge status-confirmed">Confirmed</span>',
+        'rolled_back': '<span class="badge status-badge status-rolled-back">Rolled Back</span>',
+        'expired': '<span class="badge status-badge status-expired">Expired</span>'
+    };
+    return badges[status] || badges['expired'];
+}
+
+function setupCountdownTimer(checkpoint) {
+    const timerId = `timer_${checkpoint.id}`;
+    const timerElement = document.getElementById(timerId);
+    
+    if (!timerElement || !checkpoint.monitoring) return;
+    
+    const created = new Date(checkpoint.created).getTime();
+    const timeout = checkpoint.timeout * 1000;
+    
+    const updateTimer = () => {
+        const now = Date.now();
+        const elapsed = now - created;
+        const remaining = Math.max(0, timeout - elapsed);
+        
+        if (remaining === 0) {
+            clearInterval(activeTimers[checkpoint.id]);
+            timerElement.innerHTML = '<span class="text-danger">Expired</span>';
+            refreshHistory();
+        } else {
+            const seconds = Math.floor(remaining / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const displaySeconds = seconds % 60;
+            
+            timerElement.innerHTML = `<span class="countdown-timer">${minutes}:${displaySeconds.toString().padStart(2, '0')}</span>`;
+        }
+    };
+    
+    // Update immediately and then every second
+    updateTimer();
+    activeTimers[checkpoint.id] = setInterval(updateTimer, 1000);
+}
+
+async function confirmCheckpoint(checkpointId) {
+    if (!confirm('Confirm these changes and prevent automatic rollback?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/rollback/confirm', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ checkpoint_id: checkpointId })
+        });
+        
+        if (response.ok) {
+            showNotification('Changes confirmed successfully', 'success');
+            refreshHistory();
+        } else {
+            throw new Error('Failed to confirm changes');
+        }
+    } catch (error) {
+        console.error('Error confirming checkpoint:', error);
+        showNotification('Failed to confirm changes', 'error');
+    }
+}
+
+async function rollbackCheckpoint(checkpointId) {
+    if (!confirm('Are you sure you want to rollback these changes?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/rollback/trigger', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                checkpoint_id: checkpointId,
+                reason: 'Manual rollback from history page'
+            })
+        });
+        
+        if (response.ok) {
+            showNotification('Rollback completed successfully', 'success');
+            refreshHistory();
+        } else {
+            throw new Error('Failed to trigger rollback');
+        }
+    } catch (error) {
+        console.error('Error triggering rollback:', error);
+        showNotification('Failed to trigger rollback', 'error');
+    }
+}
+
+async function viewCheckpoint(checkpointId) {
+    try {
+        const response = await fetch(`/api/rollback/status/${checkpointId}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch checkpoint details');
+        }
+        
+        const result = await response.json();
+        const checkpoint = result.checkpoint;
+        
+        const detailsHtml = `
+            <dl class="row">
+                <dt class="col-sm-4">Checkpoint ID:</dt>
+                <dd class="col-sm-8"><code>${checkpoint.id}</code></dd>
+                
+                <dt class="col-sm-4">Type:</dt>
+                <dd class="col-sm-8">${checkpoint.id.split('_')[0]}</dd>
+                
+                <dt class="col-sm-4">Status:</dt>
+                <dd class="col-sm-8">${getStatusBadge(getCheckpointStatus(checkpoint))}</dd>
+                
+                <dt class="col-sm-4">Created:</dt>
+                <dd class="col-sm-8">${new Date(checkpoint.created).toLocaleString()}</dd>
+                
+                <dt class="col-sm-4">Timeout:</dt>
+                <dd class="col-sm-8">${checkpoint.timeout} seconds</dd>
+                
+                <dt class="col-sm-4">Description:</dt>
+                <dd class="col-sm-8">${checkpoint.description || 'No description'}</dd>
+                
+                ${checkpoint.confirmed ? `
+                    <dt class="col-sm-4">Confirmed At:</dt>
+                    <dd class="col-sm-8">${new Date(checkpoint.confirmed_at).toLocaleString()}</dd>
+                ` : ''}
+                
+                ${checkpoint.rolled_back ? `
+                    <dt class="col-sm-4">Rolled Back At:</dt>
+                    <dd class="col-sm-8">${new Date(checkpoint.rollback_time).toLocaleString()}</dd>
+                    
+                    <dt class="col-sm-4">Rollback Reason:</dt>
+                    <dd class="col-sm-8">${checkpoint.rollback_reason}</dd>
+                ` : ''}
+            </dl>
+        `;
+        
+        document.getElementById('checkpointDetails').innerHTML = detailsHtml;
+        
+        // Show/hide action buttons based on status
+        const confirmBtn = document.getElementById('confirmBtn');
+        const rollbackBtn = document.getElementById('rollbackBtn');
+        
+        if (getCheckpointStatus(checkpoint) === 'active') {
+            confirmBtn.style.display = 'inline-block';
+            rollbackBtn.style.display = 'inline-block';
+            
+            confirmBtn.onclick = () => {
+                confirmCheckpoint(checkpoint.id);
+                bootstrap.Modal.getInstance(document.getElementById('checkpointModal')).hide();
+            };
+            
+            rollbackBtn.onclick = () => {
+                rollbackCheckpoint(checkpoint.id);
+                bootstrap.Modal.getInstance(document.getElementById('checkpointModal')).hide();
+            };
+        } else {
+            confirmBtn.style.display = 'none';
+            rollbackBtn.style.display = 'none';
+        }
+        
+        // Show modal
+        new bootstrap.Modal(document.getElementById('checkpointModal')).show();
+        
+    } catch (error) {
+        console.error('Error viewing checkpoint:', error);
+        showNotification('Failed to load checkpoint details', 'error');
+    }
+}
+
+function showNotification(message, type = 'info') {
+    // Create toast notification
+    const toastHtml = `
+        <div class="toast align-items-center text-white bg-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+    const toastElement = document.createElement('div');
+    toastElement.innerHTML = toastHtml;
+    toastContainer.appendChild(toastElement.firstElementChild);
+    
+    const toast = new bootstrap.Toast(toastContainer.lastElementChild);
+    toast.show();
+}
+
+function createToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+    document.body.appendChild(container);
+    return container;
+}
+</script>
+{% endblock %}

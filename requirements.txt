@@ -1,0 +1,21 @@
+# DockWINterface Requirements
+# Generated from pyproject.toml
+
+# Web Framework
+Flask==3.0.3
+flask-limiter==3.8.0
+prometheus-flask-exporter==0.23.0
+gunicorn>=23.0.0
+
+# Database (optional)
+flask-sqlalchemy>=3.1.1
+psycopg2-binary>=2.9.10
+
+# Configuration
+pyyaml>=6.0.2
+
+# Validation
+email-validator>=2.2.0
+
+# AI Integration (optional)
+openai>=1.99.9

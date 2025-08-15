@@ -1,8 +1,8 @@
-# DokWinterface Production Deployment Guide
+# DockWINterface Production Deployment Guide
 
 ## Overview
 
-DokWinterface is a production-ready web application for managing Windows containers using the Dockur project. This guide covers deployment, configuration, and operational considerations.
+DockWINterface is a production-ready web application for managing Windows containers using the Dockur project. This guide covers deployment, configuration, and operational considerations.
 
 ## Prerequisites
 
@@ -114,7 +114,7 @@ server {
 
 ### Windows Container Requirements
 
-DokWinterface generates configurations for Windows containers using Dockur. Ensure:
+DockWINterface generates configurations for Windows containers using Dockur. Ensure:
 
 1. **Hardware Virtualization**: KVM support on Linux hosts
 2. **Resource Allocation**: Adequate CPU, RAM, and storage for Windows VMs

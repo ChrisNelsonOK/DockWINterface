@@ -28,7 +28,7 @@ class AIAssistant:
         
         try:
             # System prompt for Docker/Windows container expertise
-            system_prompt = """You are DokWinterface AI Assistant, an expert in Docker containerization and Windows container deployments using the Dockur Windows project.
+            system_prompt = """You are DockWINterface AI Assistant, an expert in Docker containerization and Windows container deployments using the Dockur Windows project.
 
 You help users with:
 - Configuring Windows containers using Dockur

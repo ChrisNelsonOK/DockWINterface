@@ -1,4 +1,4 @@
-// DokWinterface Configuration Wizard JavaScript
+// DockWINterface Configuration Wizard JavaScript
 
 // Wizard state
 let currentStep = 1;
@@ -26,6 +26,12 @@ function initializeWizard() {
     const textarea = document.getElementById('messageInput');
     if (textarea) {
         textarea.addEventListener('input', autoResizeTextarea);
+    }
+    
+    // Setup rollback protection toggle
+    const enableRollback = document.getElementById('enableRollback');
+    if (enableRollback) {
+        enableRollback.addEventListener('change', toggleRollbackOptions);
     }
 }
 
@@ -234,6 +240,7 @@ function validateSystemConfig() {
 function validateNetworkConfig() {
     const rdpPort = document.getElementById('rdpPort').value;
     const vncPort = document.getElementById('vncPort').value;
+    const networkMode = document.getElementById('networkMode').value;
     
     if (rdpPort && (parseInt(rdpPort) < 1024 || parseInt(rdpPort) > 65535)) {
         showFieldError('rdpPort', 'RDP port must be between 1024 and 65535');
@@ -248,6 +255,45 @@ function validateNetworkConfig() {
     if (rdpPort && vncPort && rdpPort === vncPort) {
         showFieldError('vncPort', 'VNC port must be different from RDP port');
         return false;
+    }
+    
+    // Validate macvlan configuration if selected
+    if (networkMode === 'macvlan') {
+        const subnet = document.getElementById('macvlanSubnet').value;
+        const gateway = document.getElementById('macvlanGateway').value;
+        const ipRange = document.getElementById('macvlanIpRange').value;
+        const parent = document.getElementById('macvlanParent').value;
+        const containerIp = document.getElementById('macvlanContainerIP').value;
+        
+        // Validate CIDR notation for subnet
+        if (subnet && !/^(\d{1,3}\.){3}\d{1,3}\/\d{1,2}$/.test(subnet)) {
+            showFieldError('macvlanSubnet', 'Subnet must be in CIDR notation (e.g., 192.168.1.0/24)');
+            return false;
+        }
+        
+        // Validate CIDR notation for IP range
+        if (ipRange && !/^(\d{1,3}\.){3}\d{1,3}\/\d{1,2}$/.test(ipRange)) {
+            showFieldError('macvlanIpRange', 'IP range must be in CIDR notation (e.g., 192.168.1.128/28)');
+            return false;
+        }
+        
+        // Validate IP address format for gateway
+        if (gateway && !/^(\d{1,3}\.){3}\d{1,3}$/.test(gateway)) {
+            showFieldError('macvlanGateway', 'Gateway must be a valid IP address');
+            return false;
+        }
+        
+        // Validate IP address format for container IP
+        if (containerIp && !/^(\d{1,3}\.){3}\d{1,3}$/.test(containerIp)) {
+            showFieldError('macvlanContainerIP', 'Container IP must be a valid IP address');
+            return false;
+        }
+        
+        // Validate parent interface name
+        if (parent && !/^[a-zA-Z0-9_.-]+$/.test(parent)) {
+            showFieldError('macvlanParent', 'Invalid interface name');
+            return false;
+        }
     }
     
     return true;
@@ -460,6 +506,12 @@ function generateConfigurationReview() {
                     <tr><td>VNC Port:</td><td>${config.vnc_port || '8006'}</td></tr>
                     <tr><td>Network Mode:</td><td>${config.network_mode || 'Default (Bridge)'}</td></tr>
                     ${config.network_mode === 'static' && config.static_ip ? `<tr><td>Static IP:</td><td>${config.static_ip}</td></tr>` : ''}
+                    ${config.network_mode === 'macvlan' ? `
+                        <tr><td>Macvlan Subnet:</td><td>${config.macvlan_subnet || 'Not configured'}</td></tr>
+                        <tr><td>Macvlan Gateway:</td><td>${config.macvlan_gateway || 'Not configured'}</td></tr>
+                        <tr><td>Parent Interface:</td><td>${config.macvlan_parent || 'Not configured'}</td></tr>
+                        <tr><td>Container IP:</td><td>${config.macvlanContainerIP || 'Not configured'}</td></tr>
+                    ` : ''}
                     ${config.enable_snmp ? `<tr><td>SNMP Enabled:</td><td>Yes</td></tr>` : ''}
                     ${config.enable_logging ? `<tr><td>Logging Server:</td><td>${config.log_server_host || 'Not configured'}</td></tr>` : ''}
                     <tr><td>Additional NICs:</td><td>${config.additional_networks ? config.additional_networks.length : 0} interface(s)</td></tr>
@@ -489,10 +541,18 @@ function generateConfigurationReview() {
 async function generateConfig() {
     saveCurrentStepData();
     
+    // Add rollback protection settings if enabled
+    const enableRollback = document.getElementById('enableRollback');
+    const rollbackTimeout = document.getElementById('rollbackTimeout');
+    const rollbackMonitoring = document.getElementById('rollbackMonitoring');
+    
     const config = {
         ...formData,
         additional_volumes: collectVolumeMounts(),
-        additional_networks: collectNetworkInterfaces()
+        additional_networks: collectNetworkInterfaces(),
+        enable_rollback: enableRollback ? enableRollback.checked : false,
+        rollback_timeout: rollbackTimeout ? parseInt(rollbackTimeout.value) : 300,
+        rollback_monitoring: rollbackMonitoring ? rollbackMonitoring.value : 'connectivity'
     };
     
     // Validate configuration before generating
@@ -526,7 +586,13 @@ async function generateConfig() {
         
         if (result.success) {
             displayGeneratedFiles(result);
-            showNotification('Configuration files generated successfully', 'success');
+            
+            // Check if rollback protection is active
+            if (result.rollback_checkpoint) {
+                showRollbackNotification(result.rollback_checkpoint);
+            } else {
+                showNotification('Configuration files generated successfully', 'success');
+            }
             
             // Update statistics
             incrementStat('totalConfigs');
@@ -821,23 +887,45 @@ function collectNetworkInterfaces() {
 }
 
 // Configuration Toggle Functions
-function toggleStaticIPConfig() {
+function toggleNetworkConfig() {
     const networkMode = document.getElementById('networkMode').value;
     const staticIpConfig = document.getElementById('staticIpConfig');
+    const macvlanConfig = document.getElementById('macvlanConfig');
     
+    // Hide all network configs first
     if (staticIpConfig) {
-        if (networkMode === 'static') {
-            staticIpConfig.style.display = 'block';
-            // Make static IP fields required
-            const requiredFields = staticIpConfig.querySelectorAll('input[name="static_ip"], input[name="gateway"]');
-            requiredFields.forEach(field => field.required = true);
-        } else {
-            staticIpConfig.style.display = 'none';
-            // Remove required attribute
-            const fields = staticIpConfig.querySelectorAll('input');
-            fields.forEach(field => field.required = false);
-        }
+        staticIpConfig.style.display = 'none';
+        const fields = staticIpConfig.querySelectorAll('input');
+        fields.forEach(field => field.required = false);
     }
+    
+    if (macvlanConfig) {
+        macvlanConfig.style.display = 'none';
+        const fields = macvlanConfig.querySelectorAll('input');
+        fields.forEach(field => field.required = false);
+    }
+    
+    // Show the selected configuration
+    if (networkMode === 'static' && staticIpConfig) {
+        staticIpConfig.style.display = 'block';
+        // Make static IP fields required
+        const requiredFields = staticIpConfig.querySelectorAll('input[name="static_ip"], input[name="gateway"]');
+        requiredFields.forEach(field => field.required = true);
+    } else if (networkMode === 'macvlan' && macvlanConfig) {
+        macvlanConfig.style.display = 'block';
+        // Make macvlan fields required
+        const requiredFields = macvlanConfig.querySelectorAll(
+            'input[name="macvlan_subnet"], input[name="macvlan_gateway"], ' +
+            'input[name="macvlan_ip_range"], input[name="macvlan_parent"], ' +
+            'input[name="macvlanContainerIP"]'
+        );
+        requiredFields.forEach(field => field.required = true);
+    }
+}
+
+// Legacy function for backward compatibility
+function toggleStaticIPConfig() {
+    toggleNetworkConfig();
 }
 
 function toggleSnmpConfig() {
@@ -872,6 +960,119 @@ window.addVolumeMount = addVolumeMount;
 window.removeVolumeMount = removeVolumeMount;
 window.addNetworkInterface = addNetworkInterface;
 window.removeNetworkInterface = removeNetworkInterface;
+window.toggleNetworkConfig = toggleNetworkConfig;
+// Rollback Protection Functions
+function toggleRollbackOptions() {
+    const enableRollback = document.getElementById('enableRollback');
+    const rollbackOptions = document.getElementById('rollbackOptions');
+    
+    if (enableRollback && rollbackOptions) {
+        rollbackOptions.style.display = enableRollback.checked ? 'block' : 'none';
+        
+        // Auto-enable rollback for macvlan network mode
+        const networkMode = document.getElementById('networkMode');
+        if (networkMode && networkMode.value === 'macvlan' && enableRollback.checked) {
+            const rollbackMonitoring = document.getElementById('rollbackMonitoring');
+            if (rollbackMonitoring) {
+                rollbackMonitoring.value = 'connectivity';
+            }
+        }
+    }
+}
+
+function showRollbackNotification(checkpointInfo) {
+    const message = `
+        <div class="alert alert-warning" role="alert">
+            <h5 class="alert-heading"><i class="fas fa-shield-alt me-2"></i>Rollback Protection Active</h5>
+            <p>Configuration deployed with automatic rollback protection.</p>
+            <hr>
+            <p class="mb-2"><strong>Checkpoint ID:</strong> ${checkpointInfo.checkpoint_id}</p>
+            <p class="mb-2"><strong>Timeout:</strong> ${checkpointInfo.timeout} seconds</p>
+            <p class="mb-2"><strong>Status:</strong> Monitoring for confirmation...</p>
+            <div class="mt-3">
+                <button class="btn btn-success btn-sm me-2" onclick="confirmRollback('${checkpointInfo.checkpoint_id}')">
+                    <i class="fas fa-check me-1"></i>Confirm Changes
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="triggerRollback('${checkpointInfo.checkpoint_id}')">
+                    <i class="fas fa-undo me-1"></i>Rollback Now
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Create modal or prominent notification
+    const modalDiv = document.createElement('div');
+    modalDiv.className = 'rollback-notification';
+    modalDiv.innerHTML = message;
+    document.body.appendChild(modalDiv);
+    
+    // Auto-remove after timeout if not confirmed
+    setTimeout(() => {
+        if (document.body.contains(modalDiv)) {
+            modalDiv.remove();
+        }
+    }, checkpointInfo.timeout * 1000);
+}
+
+async function confirmRollback(checkpointId) {
+    try {
+        const response = await fetch('/api/rollback/confirm', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ checkpoint_id: checkpointId })
+        });
+        
+        if (response.ok) {
+            showNotification('Changes confirmed successfully', 'success');
+            // Remove rollback notification
+            const notification = document.querySelector('.rollback-notification');
+            if (notification) {
+                notification.remove();
+            }
+        } else {
+            throw new Error('Failed to confirm changes');
+        }
+    } catch (error) {
+        console.error('Error confirming rollback:', error);
+        showNotification('Failed to confirm changes: ' + error.message, 'error');
+    }
+}
+
+async function triggerRollback(checkpointId) {
+    if (!confirm('Are you sure you want to rollback these changes?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/rollback/trigger', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ checkpoint_id: checkpointId })
+        });
+        
+        if (response.ok) {
+            showNotification('Rollback completed successfully', 'success');
+            // Remove rollback notification
+            const notification = document.querySelector('.rollback-notification');
+            if (notification) {
+                notification.remove();
+            }
+        } else {
+            throw new Error('Failed to trigger rollback');
+        }
+    } catch (error) {
+        console.error('Error triggering rollback:', error);
+        showNotification('Failed to trigger rollback: ' + error.message, 'error');
+    }
+}
+
+window.toggleRollbackOptions = toggleRollbackOptions;
+window.confirmRollback = confirmRollback;
+window.triggerRollback = triggerRollback;
 window.toggleStaticIPConfig = toggleStaticIPConfig;
 window.toggleSnmpConfig = toggleSnmpConfig;
 window.toggleLoggingConfig = toggleLoggingConfig;
