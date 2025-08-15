@@ -1,0 +1,59 @@
+# DokWinterface Production Docker Compose
+version: '3.8'
+
+services:
+  dokwinterface:
+    build: .
+    container_name: dokwinterface
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - SESSION_SECRET=${SESSION_SECRET}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - FLASK_ENV=production
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./generated_configs:/app/generated_configs
+    networks:
+      - dokwinterface
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Optional: Reverse proxy for production
+  nginx:
+    image: nginx:alpine
+    container_name: dokwinterface-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - dokwinterface
+    networks:
+      - dokwinterface
+    profiles:
+      - proxy
+
+networks:
+  dokwinterface:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  generated_configs:
+    driver: local

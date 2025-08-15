@@ -223,23 +223,19 @@ function loadApplicationLogs() {
     const logsContent = document.getElementById('logsContent');
     if (!logsContent) return;
     
-    logsContent.textContent = 'Loading logs...';
-    
-    // Simulate loading application logs
-    setTimeout(() => {
-        const logs = `
-[${new Date().toISOString()}] INFO: DokWinterface started successfully
-[${new Date().toISOString()}] INFO: Flask server running on 0.0.0.0:5000
-[${new Date().toISOString()}] INFO: AI Assistant initialized
-[${new Date().toISOString()}] DEBUG: Configuration service ready
-[${new Date().toISOString()}] INFO: Docker config generator initialized
-[${new Date().toISOString()}] INFO: Static files served from /static
-[${new Date().toISOString()}] DEBUG: Template engine loaded
-[${new Date().toISOString()}] INFO: All services operational
-        `.trim();
-        
-        logsContent.textContent = logs;
-    }, 1000);
+    // Production: Show information about accessing real logs
+    logsContent.innerHTML = `
+        <div class="text-center text-muted py-4">
+            <i class="fas fa-file-alt fa-2x mb-3"></i>
+            <p class="mb-3">Application logs will be available here when containers are running.</p>
+            <div class="text-start">
+                <p><strong>View container logs:</strong></p>
+                <code class="d-block bg-dark p-2 rounded">docker logs [container-name]</code>
+                <p class="mt-3"><strong>Follow real-time logs:</strong></p>
+                <code class="d-block bg-dark p-2 rounded">docker logs -f [container-name]</code>
+            </div>
+        </div>
+    `;
 }
 
 // Format utilities
