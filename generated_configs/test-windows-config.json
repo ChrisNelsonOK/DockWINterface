@@ -1,0 +1,18 @@
+{
+  "name": "test-windows",
+  "version": "11",
+  "username": "testuser",
+  "password": "testpass123",
+  "language": "en-US",
+  "keyboard": "us",
+  "cpu_cores": "4",
+  "ram_size": "4",
+  "disk_size": "40",
+  "rdp_port": "3389",
+  "vnc_port": "8006",
+  "network_mode": "macvlan",
+  "macvlan_subnet": "192.168.1.0/24",
+  "macvlan_gateway": "192.168.1.1",
+  "macvlan_parent": "bond0",
+  "enable_rollback": false
+}

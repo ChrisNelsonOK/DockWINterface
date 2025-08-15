@@ -1,14 +1,10 @@
 {
   "name": "test",
-  "image": "dockurr/windows",
-  "version": "win11",
-  "vnc_port": "5900",
-  "web_port": "8080",
-  "network_mode": "bridge",
-  "cpu_limit": "2",
-  "memory_limit": "4G",
-  "username": "admin",
+  "version": "11",
+  "username": "user",
   "password": "pass123",
-  "enable_rollback": true,
-  "rollback_timeout": 5
+  "network_mode": "macvlan",
+  "macvlan_parent": "bond0",
+  "macvlan_subnet": "192.168.1.0/24",
+  "macvlan_gateway": "192.168.1.1"
 }

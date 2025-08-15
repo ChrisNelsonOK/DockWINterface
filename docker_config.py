@@ -164,6 +164,10 @@ class DockerConfigGenerator:
 
         # Storage configuration
         if config.get('disk_size'):
+            env_vars.append(f"DISK={config['disk_size']}")
+        
+        # Screen resolution (if provided)
+        if config.get('screen_resolution'):
             env_vars.append(f"SCREEN={config['screen_resolution']}")
 
         # Additional options
