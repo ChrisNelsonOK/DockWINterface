@@ -268,6 +268,21 @@ class SSHRemoteDockerDeployer:
                 if 'restart' in service_config:
                     cmd_parts.extend(['--restart', service_config['restart']])
                 
+                # Add stop timeout (convert stop_grace_period to --stop-timeout)
+                if 'stop_grace_period' in service_config:
+                    grace_period = service_config['stop_grace_period']
+                    # Convert from docker-compose format (e.g., "2m") to seconds
+                    if isinstance(grace_period, str):
+                        if grace_period.endswith('m'):
+                            timeout_seconds = int(grace_period[:-1]) * 60
+                        elif grace_period.endswith('s'):
+                            timeout_seconds = int(grace_period[:-1])
+                        else:
+                            timeout_seconds = int(grace_period)
+                    else:
+                        timeout_seconds = int(grace_period)
+                    cmd_parts.extend(['--stop-timeout', str(timeout_seconds)])
+                
                 # Add network mode
                 if 'network_mode' in service_config:
                     cmd_parts.extend(['--network', service_config['network_mode']])

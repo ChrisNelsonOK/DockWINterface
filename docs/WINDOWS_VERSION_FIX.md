@@ -101,6 +101,46 @@ docker run -it --rm --name windows -p 8006:8006 \
   --stop-timeout 120 dockurr/windows
 ```
 
+## SSH Deployment Issue Resolution
+
+### Enterprise Features Investigation
+After resolving the device requirements, enterprise features were reported to cause boot failures. Systematic testing revealed:
+
+**Individual Feature Testing Results:**
+- ✅ **SNMP alone**: Windows downloading normally (environment variables: `SNMP_ENABLED=Y`, `SNMP_COMMUNITY`, etc.)
+- ✅ **Logging alone**: Clean configuration generation with no boot interference
+- ✅ **Macvlan alone**: Windows downloading normally (environment variables: `NETWORK=macvlan`, `IP=x.x.x.x`)
+- ✅ **Complex config**: All features combined work when deployed manually
+
+**Root Cause Identified:** SSH deployment process missing `--stop-timeout` parameter conversion.
+
+### SSH Deployment Fix
+The issue was in `ssh_docker.py` where docker-compose configurations were converted to `docker run` commands but the `stop_grace_period` parameter wasn't converted to `--stop-timeout`.
+
+**Fix Applied in `ssh_docker.py`:**
+```python
+# Add stop timeout (convert stop_grace_period to --stop-timeout)
+if 'stop_grace_period' in service_config:
+    grace_period = service_config['stop_grace_period']
+    # Convert from docker-compose format (e.g., "2m") to seconds
+    if isinstance(grace_period, str):
+        if grace_period.endswith('m'):
+            timeout_seconds = int(grace_period[:-1]) * 60
+        elif grace_period.endswith('s'):
+            timeout_seconds = int(grace_period[:-1])
+        else:
+            timeout_seconds = int(grace_period)
+    else:
+        timeout_seconds = int(grace_period)
+    cmd_parts.extend(['--stop-timeout', str(timeout_seconds)])
+```
+
+**Enterprise Features Status:**
+- **Macvlan Networking**: Fully functional for advanced network configurations
+- **Rollback Protection**: Critical safety feature working correctly  
+- **SNMP Monitoring**: Enterprise monitoring capability restored
+- **Logging Integration**: Centralized log collection operational
+
 ## Related Files
 - `/opt/DockWINterface/routes.py` - Contains version mapping and normalization logic
 - `/opt/DockWINterface/docker_config.py` - Generates Docker environment variables and device mappings

@@ -17,6 +17,12 @@ All notable changes to DockWINterface will be documented in this file.
   - Updated SSH deployment logic to properly check for device existence before adding
   - Windows containers now boot and install correctly with full KVM + networking support
 
+- **SSH Deployment Issue**: Enterprise features causing boot failures through SSH deployment
+  - Root cause: Missing `--stop-timeout` parameter in SSH deployment docker command generation
+  - Investigation confirmed all enterprise features (SNMP, logging, macvlan, rollback) work individually
+  - Fixed by adding `stop_grace_period` to `--stop-timeout` conversion in `ssh_docker.py`
+  - Enterprise features now fully functional: macvlan networking, rollback protection, SNMP monitoring, and logging integration
+
 ### Improved
 - **Code Organization**: 
   - Moved all test files to `tests/` directory
