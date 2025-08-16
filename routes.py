@@ -208,6 +208,8 @@ def register_routes(app, limiter):
                 if not ssh_config.get('password') and not ssh_config.get('key_path'):
                     return jsonify({'success': False, 'error': 'SSH password or key is required'}), 400
                     
+                logging.info(f"Starting SSH deployment to {ssh_config.get('host')} as {ssh_config.get('user')}")
+                
                 # Use SSH tunnel deployment
                 from ssh_docker import SSHRemoteDockerDeployer
                 from docker_config import DockerConfigGenerator
@@ -215,8 +217,12 @@ def register_routes(app, limiter):
                 generator = DockerConfigGenerator()
                 docker_compose = generator.generate_docker_compose(config)
                 
+                logging.info(f"Generated Docker Compose config for container: {config.get('name', 'windows')}")
+                
                 deployer = SSHRemoteDockerDeployer(ssh_config)
                 deployment_result = deployer.deploy(config, docker_compose)
+                
+                logging.info(f"Deployment result: {deployment_result}")
                 
                 if deployment_result['success']:
                     return jsonify({

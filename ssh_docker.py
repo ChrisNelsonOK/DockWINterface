@@ -238,12 +238,70 @@ class SSHRemoteDockerDeployer:
                     compose_path = f.name
                     
                 try:
-                    # Run docker-compose via tunnel
+                    # Run docker via tunnel
                     env = os.environ.copy()
                     env['DOCKER_HOST'] = docker_endpoint
                     
+                    container_name = config.get('name', 'windows')
+                    
+                    # Parse docker-compose to extract the docker run command
+                    import yaml
+                    compose_data = yaml.safe_load(docker_compose)
+                    service_config = compose_data.get('services', {}).get(container_name, {})
+                    
+                    # Build docker run command
+                    cmd = ['docker', 'run', '-d', '--name', container_name]
+                    
+                    # Add ports
+                    if 'ports' in service_config:
+                        for port in service_config['ports']:
+                            cmd.extend(['-p', port])
+                    
+                    # Add environment variables
+                    if 'environment' in service_config:
+                        for key, value in service_config['environment'].items():
+                            cmd.extend(['-e', f"{key}={value}"])
+                    
+                    # Add volumes
+                    if 'volumes' in service_config:
+                        for volume in service_config['volumes']:
+                            cmd.extend(['-v', volume])
+                    
+                    # Add restart policy
+                    if 'restart' in service_config:
+                        cmd.extend(['--restart', service_config['restart']])
+                    
+                    # Add network mode
+                    if 'network_mode' in service_config:
+                        cmd.extend(['--network', service_config['network_mode']])
+                    
+                    # Add privileged if needed
+                    if service_config.get('privileged'):
+                        cmd.append('--privileged')
+                    
+                    # Add capabilities
+                    if 'cap_add' in service_config:
+                        for cap in service_config['cap_add']:
+                            cmd.extend(['--cap-add', cap])
+                    
+                    # Add devices
+                    if 'devices' in service_config:
+                        for device in service_config['devices']:
+                            cmd.extend(['--device', device])
+                    
+                    # Add image
+                    cmd.append(service_config['image'])
+                    
+                    logging.info(f"Running docker command: {' '.join(cmd)}")
+                    
+                    # First, stop and remove any existing container with the same name
+                    stop_cmd = ['docker', 'stop', container_name]
+                    subprocess.run(stop_cmd, env=env, capture_output=True, text=True, timeout=30)
+                    
+                    rm_cmd = ['docker', 'rm', container_name]
+                    subprocess.run(rm_cmd, env=env, capture_output=True, text=True, timeout=30)
+                    
                     # Deploy container
-                    cmd = ['docker-compose', '-f', compose_path, 'up', '-d']
                     result = subprocess.run(
                         cmd, 
                         env=env, 
@@ -253,8 +311,6 @@ class SSHRemoteDockerDeployer:
                     )
                     
                     if result.returncode == 0:
-                        container_name = config.get('name', 'windows')
-                        
                         # Get container info
                         info_cmd = ['docker', 'inspect', container_name]
                         info_result = subprocess.run(
@@ -268,6 +324,7 @@ class SSHRemoteDockerDeployer:
                             'success': True,
                             'message': f"Container '{container_name}' deployed successfully via SSH",
                             'container_name': container_name,
+                            'container_id': result.stdout.strip(),
                             'output': result.stdout
                         }
                     else:
