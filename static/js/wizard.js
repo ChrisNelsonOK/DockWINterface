@@ -1025,12 +1025,10 @@ async function deployToRemote() {
             // Update statistics
             incrementStat('totalDeployments');
             
-            // Optionally redirect to deployments page
+            // Show success message with container info
             setTimeout(() => {
-                if (confirm('Deployment successful! Would you like to view the deployments page?')) {
-                    window.location.href = '/deployments';
-                }
-            }, 2000);
+                showNotification(`Container '${result.container_name}' has been successfully deployed!`, 'success');
+            }, 1000);
         } else {
             throw new Error(result.error || 'Deployment failed');
         }
