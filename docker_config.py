@@ -264,9 +264,15 @@ class DockerConfigGenerator:
         if config.get('username'):
             env_dict['USERNAME'] = str(config['username'])
         if config.get('password'):
-            # Escape $ characters for Docker Compose YAML ($ -> $$)
+            # Properly escape password to prevent Docker variable substitution
             password = str(config['password'])
-            env_dict['PASSWORD'] = password.replace('$', '$$')
+            # For Docker Compose, wrap passwords with $ in quotes to prevent substitution
+            if '$' in password:
+                # Escape any existing quotes and wrap in double quotes
+                escaped_password = password.replace('"', '\\"')
+                env_dict['PASSWORD'] = f'"{escaped_password}"'
+            else:
+                env_dict['PASSWORD'] = password
         
         # Version selection and keyboard settings
         if config.get('language'):

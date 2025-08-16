@@ -255,9 +255,15 @@ class SSHRemoteDockerDeployer:
                 # Add environment variables
                 if 'environment' in service_config:
                     for key, value in service_config['environment'].items():
-                        # Ensure value is a string
+                        # Ensure value is a string and escape for shell
                         value_str = str(value)
-                        cmd_parts.extend(['-e', f"{key}={value_str}"])
+                        # For sensitive values like passwords, use single quotes to prevent shell expansion
+                        if key == 'PASSWORD' and ('$' in value_str or '"' in value_str):
+                            # Remove any existing quotes from Docker Compose YAML and wrap in single quotes
+                            clean_password = value_str.strip('"\'')
+                            cmd_parts.extend(['-e', f"{key}='{clean_password}'"])
+                        else:
+                            cmd_parts.extend(['-e', f"{key}={value_str}"])
                 
                 # Add volumes
                 if 'volumes' in service_config:
