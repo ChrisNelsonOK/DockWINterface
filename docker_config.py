@@ -651,45 +651,87 @@ class RemoteDockerDeployer:
         try:
             container_name = config.get('name', 'windows')
             
-            # Create temporary file for docker-compose
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.yml', delete=False) as compose_file:
-                compose_file.write(docker_compose)
-                compose_path = compose_file.name
+            # Parse docker-compose YAML to extract configuration
+            import yaml
+            compose_data = yaml.safe_load(docker_compose)
+            service_config = compose_data.get('services', {}).get(container_name, {})
             
-            try:
-                # Set DOCKER_HOST environment variable
-                env = os.environ.copy()
+            # Set DOCKER_HOST environment variable only for TCP connections
+            env = os.environ.copy()
+            if self.docker_host.startswith('tcp://'):
                 env['DOCKER_HOST'] = self.docker_host
+            
+            # Build docker run command
+            cmd = ['docker', 'run', '-d', '--name', container_name]
+            
+            # Add ports
+            if 'ports' in service_config:
+                for port in service_config['ports']:
+                    cmd.extend(['-p', port])
+            
+            # Add environment variables
+            if 'environment' in service_config:
+                for key, value in service_config['environment'].items():
+                    # Ensure value is a string and properly formatted
+                    value_str = str(value) if value is not None else ''
+                    cmd.extend(['-e', f"{key}={value_str}"])
+            
+            # Add volumes
+            if 'volumes' in service_config:
+                for volume in service_config['volumes']:
+                    cmd.extend(['-v', volume])
+            
+            # Add restart policy
+            if 'restart' in service_config:
+                cmd.extend(['--restart', service_config['restart']])
+            
+            # Add network mode
+            if 'network_mode' in service_config:
+                cmd.extend(['--network', service_config['network_mode']])
+            
+            # Add privileged if needed
+            if service_config.get('privileged'):
+                cmd.append('--privileged')
+            
+            # Add capabilities
+            if 'cap_add' in service_config:
+                for cap in service_config['cap_add']:
+                    cmd.extend(['--cap-add', cap])
+            
+            # Add devices
+            if 'devices' in service_config:
+                for device in service_config['devices']:
+                    cmd.extend(['--device', device])
+            
+            # Add image
+            cmd.append(service_config['image'])
+            
+            logging.info(f"Deploying container with command: {' '.join(cmd)}")
+            
+            # First, stop and remove any existing container with the same name
+            stop_cmd = ['docker', 'stop', container_name]
+            subprocess.run(stop_cmd, env=env, capture_output=True, text=True, timeout=30)
+            
+            rm_cmd = ['docker', 'rm', container_name]
+            subprocess.run(rm_cmd, env=env, capture_output=True, text=True, timeout=30)
+            
+            # Deploy container
+            result = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=300)
+            
+            if result.returncode == 0:
+                container_id = result.stdout.strip()
                 
-                # Run docker-compose up with the remote host
-                # No --env-file parameter since environment variables are embedded in YAML
-                cmd = ['docker-compose', '-f', compose_path, 'up', '-d']
-                result = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=300)
-                
-                if result.returncode == 0:
-                    # Get container ID
-                    inspect_cmd = ['docker', 'ps', '-q', '-f', f'name={container_name}']
-                    inspect_result = subprocess.run(inspect_cmd, env=env, capture_output=True, text=True)
-                    container_id = inspect_result.stdout.strip() if inspect_result.returncode == 0 else None
-                    
-                    return {
-                        'success': True,
-                        'container_id': container_id,
-                        'output': result.stdout
-                    }
-                else:
-                    return {
-                        'success': False,
-                        'error': f"Docker deployment failed: {result.stderr}",
-                        'output': result.stdout
-                    }
-                    
-            finally:
-                # Clean up temporary file
-                try:
-                    os.unlink(compose_path)
-                except OSError:
-                    pass
+                return {
+                    'success': True,
+                    'container_id': container_id,
+                    'output': f"Container {container_name} deployed successfully"
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': f"Docker deployment failed: {result.stderr}",
+                    'output': result.stdout
+                }
                     
         except subprocess.TimeoutExpired:
             return {
