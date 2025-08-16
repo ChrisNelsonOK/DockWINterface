@@ -18,62 +18,68 @@ rollback_manager = RollbackManager()
 
 
 
+# Mapping from frontend Windows version strings to Dockur backend flags
+# Based on https://github.com/dockur/windows README.md
+version_map = {
+    # Windows 11
+    '11': '11',
+    '11-pro': '11',
+    '11-enterprise': '11e',
+    '11-ltsc': '11l',
+    # Windows 10
+    '10': '10',
+    '10-pro': '10',
+    '10-enterprise': '10e',
+    '10-ltsc': '10l',
+    # Legacy Windows
+    '8-enterprise': '8e',
+    '8.1-enterprise': '8e',
+    '7-ultimate': '7u',
+    'vista-ultimate': 'vu',
+    'xp': 'xp',
+    '2000': '2k',
+    # Windows Server
+    '2025': '2025',
+    '2022': '2022',
+    '2019': '2019',
+    '2016': '2016',
+    '2012': '2012',
+    '2008': '2008',
+    '2003': '2003',
+}
+
+def normalize_version(ver: str) -> str:
+    """Normalize UI-provided Windows version to backend flag."""
+    if not ver:
+        return ver
+    v = str(ver).strip().lower()
+    result = version_map.get(v, v)
+    logging.info(f"normalize_version: '{ver}' -> '{v}' -> '{result}'")
+    print(f"DEBUG normalize_version: '{ver}' -> '{v}' -> '{result}'")
+    return result
+
+def apply_version_mapping(conf: dict) -> dict:
+    """Apply version normalization to incoming config dict in-place and return it."""
+    try:
+        if not isinstance(conf, dict):
+            return conf
+        original = conf.get('version') or conf.get('windows_version')
+        logging.info(f"apply_version_mapping: original version = '{original}'")
+        print(f"DEBUG apply_version_mapping: original = '{original}'")
+        if original:
+            normalized = normalize_version(original)
+            logging.info(f"apply_version_mapping: setting version to '{normalized}'")
+            print(f"DEBUG apply_version_mapping: setting version to '{normalized}'")
+            conf['version'] = normalized
+            logging.info(f"apply_version_mapping: conf['version'] is now '{conf.get('version')}'")
+    except Exception as e:
+        logging.warning(f"Version mapping failed: {e}")
+        print(f"DEBUG: Version mapping exception: {e}")
+    return conf
+
 def register_routes(app, limiter):
     """Register all routes with the Flask app"""
     print("Registering routes with app and limiter")
-    
-    # Mapping from frontend Windows version strings to Dockur backend flags
-    # Based on https://github.com/dockur/windows README.md
-    version_map = {
-        # Windows 11
-        '11': '11',
-        '11-pro': '11',
-        '11-enterprise': '11e',
-        '11-ltsc': '11l',
-        # Windows 10
-        '10': '10',
-        '10-pro': '10',
-        '10-enterprise': '10e',
-        '10-ltsc': '10l',
-        # Legacy Windows
-        '8-enterprise': '8e',
-        '8.1-enterprise': '8e',
-        '7-ultimate': '7u',
-        'vista-ultimate': 'vu',
-        'xp': 'xp',
-        '2000': '2k',
-        # Windows Server
-        '2025': '2025',
-        '2022': '2022',
-        '2019': '2019',
-        '2016': '2016',
-        '2012': '2012',
-        '2008': '2008',
-        '2003': '2003',
-    }
-
-    def normalize_version(ver: str) -> str:
-        """Normalize UI-provided Windows version to backend flag."""
-        if not ver:
-            return ver
-        v = str(ver).strip().lower()
-        return version_map.get(v, v)
-
-    def apply_version_mapping(conf: dict) -> dict:
-        """Apply version normalization to incoming config dict in-place and return it."""
-        try:
-            if not isinstance(conf, dict):
-                return conf
-            original = conf.get('version') or conf.get('windows_version')
-            if original:
-                normalized = normalize_version(original)
-                if conf.get('version') != normalized:
-                    logging.info(f"Normalizing Windows version: {original} -> {normalized}")
-                    print(f"DEBUG: Normalized version from {original} to {normalized}")
-                    conf['version'] = normalized
-        except Exception as e:
-            logging.warning(f"Version mapping failed: {e}")
-        return conf
     
     @app.route('/')
     def index():
@@ -110,6 +116,7 @@ def register_routes(app, limiter):
             
             # Normalize Windows version value from UI to backend expected flag
             data = apply_version_mapping(data)
+            print(f"DEBUG: After normalization, data['version'] = {data.get('version')}")
             
             # Check if rollback protection is enabled
             enable_rollback = data.get('enable_rollback', False)
@@ -238,6 +245,7 @@ def register_routes(app, limiter):
             data = request.get_json()
             # Ensure version is normalized before saving
             data = apply_version_mapping(data)
+            print(f"DEBUG: After normalization for save, data['version'] = {data.get('version')}")
             config_generator.save_config_files(data)
 
             msg = 'Configuration files saved successfully'
@@ -258,6 +266,7 @@ def register_routes(app, limiter):
             
             # Normalize version in provided config (if any)
             config = apply_version_mapping(config)
+            print(f"DEBUG: After normalization for remote deploy, config['version'] = {config.get('version')}")
             
             # Check if using SSH tunnel
             if ssh_config and ssh_config.get('enabled'):
@@ -367,6 +376,7 @@ def register_routes(app, limiter):
             data = request.get_json()
             # Normalize version before validation
             data = apply_version_mapping(data)
+            print(f"DEBUG: After normalization for validation, data['version'] = {data.get('version')}")
             validation_result = config_generator.validate_config(data)
 
             return jsonify(validation_result)

@@ -281,13 +281,19 @@ class SSHRemoteDockerDeployer:
                     for cap in service_config['cap_add']:
                         cmd_parts.extend(['--cap-add', cap])
                 
-                # Add devices - skip /dev/kvm for remote deployments
+                # Add devices - check if they exist on remote host first
                 if 'devices' in service_config:
                     for device in service_config['devices']:
-                        if device == '/dev/kvm':
-                            logging.warning(f"Skipping {device} for remote deployment")
-                            continue
-                        cmd_parts.extend(['--device', device])
+                        # Check if device exists on remote host
+                        check_cmd = f"test -e {device} && echo 'exists'"
+                        stdin, stdout, stderr = ssh_client.exec_command(check_cmd)
+                        result = stdout.read().decode().strip()
+                        
+                        if result == 'exists':
+                            cmd_parts.extend(['--device', device])
+                            logging.info(f"Adding device {device} to container")
+                        else:
+                            logging.warning(f"Device {device} not found on remote host, skipping")
                 
                 # Add image
                 cmd_parts.append(service_config['image'])

@@ -5,6 +5,8 @@ import yaml
 import tempfile
 import os
 import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pytest
 from docker_config import DockerConfigGenerator, RemoteDockerDeployer
 pytest.skip("Skipping integration/script-style test during unit test runs", allow_module_level=True)

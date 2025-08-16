@@ -23,7 +23,7 @@ class DockerConfigGenerator:
             'image': 'dockurr/windows',
             'container_name': config.get('name', 'windows'),
             'environment': self._generate_environment_dict(config),
-            'devices': ['/dev/kvm'],
+            'devices': ['/dev/kvm', '/dev/net/tun'],
             'cap_add': ['NET_ADMIN'],
             'stop_grace_period': '2m',
             'restart': 'on-failure'
@@ -278,6 +278,10 @@ class DockerConfigGenerator:
         if config.get('cpu_cores'):
             env_dict['CPU_CORES'] = str(config['cpu_cores'])
         if config.get('ram_size'):
+            env_dict['RAM_SIZE'] = f"{config['ram_size']}G"
+        
+        # Windows version
+        if config.get('version'):
             env_dict['VERSION'] = str(config['version'])
         
         # Storage configuration
