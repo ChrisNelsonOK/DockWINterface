@@ -209,7 +209,7 @@ class SSHRemoteDockerDeployer:
         
     def deploy(self, config: Dict[str, Any], docker_compose: str) -> Dict[str, Any]:
         """
-        Deploy container via SSH tunnel
+        Deploy container via SSH
         
         Args:
             config: Container configuration
@@ -219,123 +219,147 @@ class SSHRemoteDockerDeployer:
             Deployment result dictionary
         """
         try:
-            # Create SSH tunnel
-            tunnel = SSHDockerTunnel(
-                ssh_host=self.ssh_config['host'],
-                ssh_user=self.ssh_config['user'],
-                ssh_password=self.ssh_config.get('password'),
-                ssh_key_path=self.ssh_config.get('key_path'),
-                ssh_port=self.ssh_config.get('port', 22)
-            )
+            # Connect directly via SSH instead of using tunnel
+            ssh_client = paramiko.SSHClient()
+            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             
-            # Use tunnel for deployment
-            with tunnel as docker_endpoint:
-                logging.info(f"SSH tunnel established: {docker_endpoint}")
+            connect_kwargs = {
+                'hostname': self.ssh_config['host'],
+                'port': self.ssh_config.get('port', 22),
+                'username': self.ssh_config['username'],
+            }
+            
+            if self.ssh_config.get('password'):
+                connect_kwargs['password'] = self.ssh_config['password']
+            elif self.ssh_config.get('key_path'):
+                connect_kwargs['key_filename'] = os.path.expanduser(self.ssh_config['key_path'])
+            
+            logging.info(f"Connecting to SSH host {self.ssh_config['host']}")
+            ssh_client.connect(**connect_kwargs)
+            
+            try:
+                # Parse docker-compose to extract configuration
+                import yaml
+                compose_data = yaml.safe_load(docker_compose)
+                container_name = config.get('name', 'windows')
+                service_config = compose_data.get('services', {}).get(container_name, {})
                 
-                # Create temporary compose file
-                with tempfile.NamedTemporaryFile(mode='w', suffix='.yml', delete=False) as f:
-                    f.write(docker_compose)
-                    compose_path = f.name
+                # Build docker run command
+                cmd_parts = ['docker', 'run', '-d', '--name', container_name]
+                
+                # Add ports
+                if 'ports' in service_config:
+                    for port in service_config['ports']:
+                        cmd_parts.extend(['-p', port])
+                
+                # Add environment variables
+                if 'environment' in service_config:
+                    for key, value in service_config['environment'].items():
+                        # Ensure value is a string
+                        value_str = str(value)
+                        cmd_parts.extend(['-e', f"{key}={value_str}"])
+                
+                # Add volumes
+                if 'volumes' in service_config:
+                    for volume in service_config['volumes']:
+                        cmd_parts.extend(['-v', volume])
+                
+                # Add restart policy
+                if 'restart' in service_config:
+                    cmd_parts.extend(['--restart', service_config['restart']])
+                
+                # Add network mode
+                if 'network_mode' in service_config:
+                    cmd_parts.extend(['--network', service_config['network_mode']])
+                
+                # Add privileged if needed
+                if service_config.get('privileged'):
+                    cmd_parts.append('--privileged')
+                
+                # Add capabilities
+                if 'cap_add' in service_config:
+                    for cap in service_config['cap_add']:
+                        cmd_parts.extend(['--cap-add', cap])
+                
+                # Add devices - skip /dev/kvm for remote deployments
+                if 'devices' in service_config:
+                    for device in service_config['devices']:
+                        if device == '/dev/kvm':
+                            logging.warning(f"Skipping {device} for remote deployment")
+                            continue
+                        cmd_parts.extend(['--device', device])
+                
+                # Add image
+                cmd_parts.append(service_config['image'])
+                
+                # Build the full command string
+                docker_cmd = ' '.join(cmd_parts)
+                logging.info(f"Running Docker command on remote host: {docker_cmd}")
+                
+                # First stop and remove any existing container
+                logging.info("Stopping and removing existing container if present")
+                stdin, stdout, stderr = ssh_client.exec_command(f"docker stop {container_name} 2>/dev/null; docker rm {container_name} 2>/dev/null")
+                stdout.read()  # Wait for completion
+                
+                # Run docker command on remote host
+                logging.info("Executing Docker run command on remote host")
+                logging.info(f"Full command: {docker_cmd}")
+                stdin, stdout, stderr = ssh_client.exec_command(docker_cmd)
+                
+                # Get output
+                output = stdout.read().decode()
+                error = stderr.read().decode()
+                exit_status = stdout.channel.recv_exit_status()
+                
+                logging.info(f"Docker command exit status: {exit_status}")
+                logging.info(f"Docker stdout: {output}")
+                if error:
+                    logging.error(f"Docker stderr: {error}")
+                
+                if exit_status != 0:
+                    error_msg = error if error else output
+                    logging.error(f"Docker run failed: {error_msg}")
                     
-                try:
-                    # Run docker via tunnel
-                    env = os.environ.copy()
-                    env['DOCKER_HOST'] = docker_endpoint
+                    # Try to get Docker version for debugging
+                    stdin, stdout, stderr = ssh_client.exec_command("docker version")
+                    version_output = stdout.read().decode()
+                    logging.info(f"Docker version on remote host: {version_output}")
                     
-                    container_name = config.get('name', 'windows')
-                    
-                    # Parse docker-compose to extract the docker run command
-                    import yaml
-                    compose_data = yaml.safe_load(docker_compose)
-                    service_config = compose_data.get('services', {}).get(container_name, {})
-                    
-                    # Build docker run command
-                    cmd = ['docker', 'run', '-d', '--name', container_name]
-                    
-                    # Add ports
-                    if 'ports' in service_config:
-                        for port in service_config['ports']:
-                            cmd.extend(['-p', port])
-                    
-                    # Add environment variables
-                    if 'environment' in service_config:
-                        for key, value in service_config['environment'].items():
-                            cmd.extend(['-e', f"{key}={value}"])
-                    
-                    # Add volumes
-                    if 'volumes' in service_config:
-                        for volume in service_config['volumes']:
-                            cmd.extend(['-v', volume])
-                    
-                    # Add restart policy
-                    if 'restart' in service_config:
-                        cmd.extend(['--restart', service_config['restart']])
-                    
-                    # Add network mode
-                    if 'network_mode' in service_config:
-                        cmd.extend(['--network', service_config['network_mode']])
-                    
-                    # Add privileged if needed
-                    if service_config.get('privileged'):
-                        cmd.append('--privileged')
-                    
-                    # Add capabilities
-                    if 'cap_add' in service_config:
-                        for cap in service_config['cap_add']:
-                            cmd.extend(['--cap-add', cap])
-                    
-                    # Add devices
-                    if 'devices' in service_config:
-                        for device in service_config['devices']:
-                            cmd.extend(['--device', device])
-                    
-                    # Add image
-                    cmd.append(service_config['image'])
-                    
-                    logging.info(f"Running docker command: {' '.join(cmd)}")
-                    
-                    # First, stop and remove any existing container with the same name
-                    stop_cmd = ['docker', 'stop', container_name]
-                    subprocess.run(stop_cmd, env=env, capture_output=True, text=True, timeout=30)
-                    
-                    rm_cmd = ['docker', 'rm', container_name]
-                    subprocess.run(rm_cmd, env=env, capture_output=True, text=True, timeout=30)
-                    
-                    # Deploy container
-                    result = subprocess.run(
-                        cmd, 
-                        env=env, 
-                        capture_output=True, 
-                        text=True, 
-                        timeout=300
-                    )
-                    
-                    if result.returncode == 0:
-                        # Get container info
-                        info_cmd = ['docker', 'inspect', container_name]
-                        info_result = subprocess.run(
-                            info_cmd,
-                            env=env,
-                            capture_output=True,
-                            text=True
-                        )
-                        
-                        return {
-                            'success': True,
-                            'message': f"Container '{container_name}' deployed successfully via SSH",
-                            'container_name': container_name,
-                            'container_id': result.stdout.strip(),
-                            'output': result.stdout
-                        }
-                    else:
-                        return {
-                            'success': False,
-                            'error': f"Deployment failed: {result.stderr}"
-                        }
-                        
-                finally:
-                    # Clean up temp file
-                    os.unlink(compose_path)
+                    return {
+                        'success': False,
+                        'error': f"Docker deployment failed: {error_msg}"
+                    }
+                
+                # Success - get container info
+                container_id = output.strip()
+                logging.info(f"Container deployed successfully with ID: {container_id}")
+                
+                # Get container details and check ports
+                stdin, stdout, stderr = ssh_client.exec_command(f"docker inspect {container_name}")
+                inspect_output = stdout.read().decode()
+                
+                # Check container status and ports
+                stdin, stdout, stderr = ssh_client.exec_command(f"docker ps -a --filter name={container_name} --format 'table {{{{.Status}}}}\\t{{{{.Ports}}}}'")
+                status_output = stdout.read().decode()
+                logging.info(f"Container status and ports: {status_output}")
+                
+                # Get logs to check if container started properly
+                stdin, stdout, stderr = ssh_client.exec_command(f"docker logs {container_name} --tail 20")
+                logs_output = stdout.read().decode()
+                logging.info(f"Container logs: {logs_output}")
+                
+                return {
+                    'success': True,
+                    'message': f"Container '{container_name}' deployed successfully via SSH to {self.ssh_config['host']}",
+                    'container_name': container_name,
+                    'container_id': container_id,
+                    'output': output,
+                    'status': status_output,
+                    'logs': logs_output
+                }
+                
+            finally:
+                ssh_client.close()
                     
         except paramiko.AuthenticationException as e:
             return {

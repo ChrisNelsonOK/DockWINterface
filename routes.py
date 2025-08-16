@@ -203,12 +203,12 @@ def register_routes(app, limiter):
                 # Validate SSH configuration
                 if not ssh_config.get('host'):
                     return jsonify({'success': False, 'error': 'SSH host is required'}), 400
-                if not ssh_config.get('user'):
+                if not ssh_config.get('username'):
                     return jsonify({'success': False, 'error': 'SSH user is required'}), 400
                 if not ssh_config.get('password') and not ssh_config.get('key_path'):
                     return jsonify({'success': False, 'error': 'SSH password or key is required'}), 400
                     
-                logging.info(f"Starting SSH deployment to {ssh_config.get('host')} as {ssh_config.get('user')}")
+                logging.info(f"Starting SSH deployment to {ssh_config.get('host')} as {ssh_config.get('username')}")
                 
                 # Use SSH tunnel deployment
                 from ssh_docker import SSHRemoteDockerDeployer
