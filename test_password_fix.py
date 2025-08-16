@@ -42,20 +42,16 @@ def test_password_escaping():
     print("-" * 50)
     
     # Check that environment variables are embedded correctly
-    service = compose_dict['services']['windows']
+    service_name = config['name']
+    service = compose_dict['services'][service_name]
     env_vars = service.get('environment', {})
     
     print("\nEnvironment Variables in YAML:")
     print(json.dumps(env_vars, indent=2))
     
-    # Verify password is correctly set
-    if env_vars.get('PASSWORD') == '$w33t@55T3a!':
-        print("\n✅ SUCCESS: Password with special characters is correctly embedded!")
-        print(f"   PASSWORD value: {env_vars.get('PASSWORD')}")
-    else:
-        print("\n❌ FAILURE: Password not correctly set")
-        print(f"   Expected: $w33t@55T3a!")
-        print(f"   Got: {env_vars.get('PASSWORD')}")
+    # Verify password is correctly escaped ($ -> $$)
+    expected_main = config['password'].replace('$', '$$')
+    assert env_vars.get('PASSWORD') == expected_main
     
     # Test with other problematic passwords
     test_passwords = [
@@ -77,12 +73,9 @@ def test_password_escaping():
         compose_yaml = generator.generate_docker_compose(test_config)
         compose_data = yaml.safe_load(compose_yaml)
         
-        embedded_pwd = compose_data['services']['windows']['environment'].get('PASSWORD')
-        
-        if embedded_pwd == pwd:
-            print(f"✅ '{pwd}' -> Correctly embedded")
-        else:
-            print(f"❌ '{pwd}' -> Failed (got: '{embedded_pwd}')")
+        embedded_pwd = compose_data['services'][service_name]['environment'].get('PASSWORD')
+        expected = pwd.replace('$', '$$')
+        assert embedded_pwd == expected, f"Password escaping failed for {pwd}: got '{embedded_pwd}', expected '{expected}'"
 
 if __name__ == "__main__":
     try:

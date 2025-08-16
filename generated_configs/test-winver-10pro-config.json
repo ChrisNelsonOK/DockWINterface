@@ -1,0 +1,10 @@
+{
+  "cpu_cores": 2,
+  "disk_size": 40,
+  "name": "test-winver-10pro",
+  "password": "pass12345",
+  "ram_size": 4,
+  "username": "admin",
+  "windows_version": "10-pro",
+  "version": "10"
+}

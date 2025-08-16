@@ -30,7 +30,8 @@ def test_password_escaping():
     compose_data = yaml.safe_load(docker_compose)
     
     # Check the password in environment variables
-    env_vars = compose_data['services']['windows']['environment']
+    service_name = config['name']
+    env_vars = compose_data['services'][service_name]['environment']
     
     # The password should have $ escaped as $$
     expected_password = 'P@$$$$w0rd$$w33t'  # Each $ becomes $$
@@ -47,9 +48,8 @@ def test_password_escaping():
     # Also verify Docker host port is 2375
     print(f"\nDocker host in config: {config['docker_host']}")
     assert '2375' in config['docker_host'], "Docker host should use port 2375"
-    print("✓ Docker host port is correctly set to 2375")
+    print("\u2713 Docker host port is correctly set to 2375")
     
-    return True
 
 if __name__ == "__main__":
     print("Starting password escaping test...")

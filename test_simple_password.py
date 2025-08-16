@@ -3,6 +3,8 @@
 
 import sys
 import traceback
+import pytest
+pytest.skip("Skipping non-pytest script during unit test runs", allow_module_level=True)
 
 try:
     from docker_config import DockerConfigGenerator

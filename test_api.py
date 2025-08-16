@@ -2,6 +2,8 @@
 
 import requests
 import json
+import pytest
+pytest.skip("Skipping live API test during unit test runs", allow_module_level=True)
 
 # Test data similar to what the wizard would send
 test_config = {

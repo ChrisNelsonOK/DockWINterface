@@ -373,7 +373,7 @@ function clearFormValidation(formId) {
 // Loading states
 function setLoading(elementId, isLoading = true) {
     const element = document.getElementById(elementId);
-    if (!element) return;
+    if (!element) { console.warn(`setLoading: element #${elementId} not found`); return; }
     
     if (isLoading) {
         element.classList.add('loading');

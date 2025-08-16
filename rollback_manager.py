@@ -356,6 +356,12 @@ class RollbackManager:
             'confirmed': True
         }
 
+    def confirm_checkpoint(self, checkpoint_id: str) -> Dict[str, Any]:
+        """Backward-compatible alias used by routes.py.
+        Delegates to confirm_change to maintain existing behavior.
+        """
+        return self.confirm_change(checkpoint_id)
+
     def trigger_rollback(self, checkpoint_id: str,
                          reason: str = "Manual trigger") -> Dict[str, Any]:
         """Trigger a rollback to a checkpoint"""
@@ -449,8 +455,11 @@ class RollbackManager:
         self._run_command(['systemctl', 'restart', 'networking'])
         logging.info("Network state restoration completed")
 
-    def get_rollback_history(self) -> List[Dict[str, Any]]:
-        """Get history of rollbacks"""
+    def get_rollback_history(self, days: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Get history of rollbacks.
+        If 'days' is provided, only include checkpoints created within
+        the last 'days' days.
+        """
         history: List[Dict[str, Any]] = []
 
         if not self.snapshot_dir.exists():
@@ -482,6 +491,21 @@ class RollbackManager:
                         entry['rolled_back'] = False
 
                     history.append(entry)
+
+        # Optionally filter by days
+        if days is not None:
+            cutoff_date = datetime.now() - timedelta(days=days)
+
+            def _parse_created(ts: str) -> datetime:
+                try:
+                    return datetime.fromisoformat(ts)
+                except Exception:
+                    return datetime.min
+
+            history = [
+                h for h in history
+                if h.get('created') and _parse_created(h['created']) >= cutoff_date
+            ]
 
         # Sort by creation time
         history.sort(key=lambda x: x.get('created', ''), reverse=True)

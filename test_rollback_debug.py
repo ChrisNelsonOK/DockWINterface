@@ -2,6 +2,8 @@
 """Debug script for rollback feature"""
 import requests
 import json
+import pytest
+pytest.skip("Skipping integration/script-style test during unit test runs", allow_module_level=True)
 
 # Test with minimal config
 config = {

@@ -2,6 +2,8 @@
 """Simple test to debug rollback issue"""
 import requests
 import json
+import pytest
+pytest.skip("Skipping integration/script-style test during unit test runs", allow_module_level=True)
 
 # Send request with curl equivalent
 url = "http://localhost:5000/api/generate-config"

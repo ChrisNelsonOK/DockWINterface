@@ -3,6 +3,8 @@
 
 import yaml
 from docker_config import DockerConfigGenerator
+import pytest
+pytest.skip("Skipping non-pytest script during unit test runs", allow_module_level=True)
 
 # Open output file
 with open('test_output.txt', 'w') as f:

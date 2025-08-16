@@ -1,0 +1,9 @@
+{
+  "cpu_cores": 2,
+  "disk_size": 40,
+  "name": "test-win11iot",
+  "password": "pass12345",
+  "ram_size": 4,
+  "username": "admin",
+  "version": "win11iot"
+}

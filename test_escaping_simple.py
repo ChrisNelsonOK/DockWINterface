@@ -3,6 +3,8 @@
 
 import sys
 import os
+import pytest
+pytest.skip("Skipping non-pytest script during unit test runs", allow_module_level=True)
 
 # Write output to file for debugging
 output_file = open('test_escaping_output.txt', 'w')

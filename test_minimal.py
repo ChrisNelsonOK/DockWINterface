@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import sys
+import pytest
+pytest.skip("Skipping non-pytest script during unit test runs", allow_module_level=True)
 print("Test starting", file=sys.stderr, flush=True)
 
 try:

@@ -1,0 +1,12 @@
+{
+  "cpu_cores": 2,
+  "disk_size": 40,
+  "enable_rollback": true,
+  "name": "rb-test-11ent",
+  "password": "pass12345",
+  "ram_size": 8,
+  "rollback_timeout": 7,
+  "username": "admin",
+  "windows_version": "11-enterprise",
+  "version": "11e"
+}

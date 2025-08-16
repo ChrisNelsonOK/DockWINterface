@@ -45,6 +45,7 @@ class DockerConfigGenerator:
             service_config['device_cgroup_rules'] = ['c *:* rwm']
 
         compose_config = {
+            'version': '3.8',
             'services': {
                 config.get('name', 'windows'): service_config
             }
@@ -167,11 +168,19 @@ class DockerConfigGenerator:
         if config.get('cpu_cores'):
             env_vars.append(f"CPU_CORES={config['cpu_cores']}")
         if config.get('ram_size'):
-            env_vars.append(f"VERSION={config['version']}")
+            ram = config['ram_size']
+            ram_str = str(ram)
+            if isinstance(ram, int) or ram_str.isdigit():
+                ram_str = f"{ram_str}G"
+            env_vars.append(f"RAM_SIZE={ram_str}")
 
         # Storage configuration
         if config.get('disk_size'):
-            env_vars.append(f"DISK={config['disk_size']}")
+            disk = config['disk_size']
+            disk_str = str(disk)
+            if isinstance(disk, int) or disk_str.isdigit():
+                disk_str = f"{disk_str}G"
+            env_vars.append(f"DISK_SIZE={disk_str}")
         
         # Screen resolution (if provided)
         if config.get('screen_resolution'):

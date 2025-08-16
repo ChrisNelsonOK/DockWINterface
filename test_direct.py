@@ -3,6 +3,8 @@
 import subprocess
 import time
 import requests
+import pytest
+pytest.skip("Skipping integration/script-style test during unit test runs", allow_module_level=True)
 
 # Kill any existing server
 subprocess.run(["pkill", "-9", "-f", "python"], capture_output=True)
