@@ -322,6 +322,48 @@ class DockerConfigGenerator:
         if config.get('file_sharing'):
             env_dict['SHARE'] = 'true'
         
+        # SNMP configuration
+        if config.get('enable_snmp'):
+            env_dict['SNMP_ENABLED'] = 'Y'
+            if config.get('snmp_community'):
+                env_dict['SNMP_COMMUNITY'] = str(config['snmp_community'])
+            if config.get('snmp_port'):
+                env_dict['SNMP_PORT'] = str(config['snmp_port'])
+            if config.get('snmp_location'):
+                env_dict['SNMP_LOCATION'] = str(config['snmp_location'])
+            if config.get('snmp_contact'):
+                env_dict['SNMP_CONTACT'] = str(config['snmp_contact'])
+            if config.get('snmp_trap_destinations'):
+                # Convert multiline trap destinations to comma-separated list
+                traps = config['snmp_trap_destinations'].strip().replace('\n', ',')
+                env_dict['SNMP_TRAPS'] = traps
+        
+        # Logging configuration
+        if config.get('enable_logging'):
+            env_dict['LOGGING_ENABLED'] = 'Y'
+            if config.get('log_server_host'):
+                env_dict['LOG_SERVER'] = str(config['log_server_host'])
+            if config.get('log_server_port'):
+                env_dict['LOG_PORT'] = str(config['log_server_port'])
+            if config.get('log_protocol'):
+                env_dict['LOG_PROTOCOL'] = str(config['log_protocol'])
+            if config.get('log_format'):
+                env_dict['LOG_FORMAT'] = str(config['log_format'])
+            
+            # Log sources
+            log_sources = []
+            if config.get('log_windows_events'):
+                log_sources.append('windows_events')
+            if config.get('log_snmp_traps'):
+                log_sources.append('snmp_traps')
+            if config.get('log_performance_metrics'):
+                log_sources.append('performance_metrics')
+            if config.get('log_application_traces'):
+                log_sources.append('application_traces')
+            
+            if log_sources:
+                env_dict['LOG_SOURCES'] = ','.join(log_sources)
+        
         return env_dict
     
     def _escape_env_value(self, value: str, for_env_file: bool = False) -> str:
