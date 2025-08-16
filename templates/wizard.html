@@ -594,16 +594,36 @@
                             <div class="tab-content" id="filesTabContent">
                                 <div class="tab-pane fade show active" id="docker-compose-content" role="tabpanel">
                                     <pre class="bg-dark text-light p-3 rounded"><code id="dockerComposeCode"></code></pre>
-                                    <button class="btn btn-outline-light btn-sm" onclick="copyToClipboard('dockerComposeCode')">
-                                        <i class="fas fa-copy me-1"></i>Copy
-                                    </button>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <button class="btn btn-outline-light btn-sm" onclick="copyToClipboard('dockerComposeCode')">
+                                            <i class="fas fa-copy me-1"></i>Copy
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="tab-pane fade" id="env-file-content" role="tabpanel">
                                     <pre class="bg-dark text-light p-3 rounded"><code id="envFileCode"></code></pre>
-                                    <button class="btn btn-outline-light btn-sm" onclick="copyToClipboard('envFileCode')">
-                                        <i class="fas fa-copy me-1"></i>Copy
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <button class="btn btn-outline-light btn-sm" onclick="copyToClipboard('envFileCode')">
+                                            <i class="fas fa-copy me-1"></i>Copy
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Deployment Options -->
+                            <div class="mt-3 p-3 bg-dark rounded border">
+                                <h6 class="text-light mb-3"><i class="fas fa-rocket me-2"></i>Deployment Options</h6>
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <button class="btn btn-success btn-sm" id="deployRemoteBtn" onclick="deployToRemote()">
+                                        <i class="fas fa-cloud me-1"></i>Deploy to Remote Host
+                                    </button>
+                                    <button class="btn btn-outline-info btn-sm" onclick="downloadConfig()">
+                                        <i class="fas fa-download me-1"></i>Download Files
                                     </button>
                                 </div>
+                                <small class="text-muted d-block mt-2">
+                                    <i class="fas fa-info-circle me-1"></i>Configure Docker host in Settings to enable remote deployment
+                                </small>
                             </div>
                         </div>
                     </div>

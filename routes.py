@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify
 import logging
 import json
 import platform
+import time
 
 # Import components
 from docker_config import DockerConfigGenerator
@@ -187,6 +188,87 @@ def register_routes(app, limiter):
         except Exception as e:
             logging.error(f"Error saving config files: {str(e)}")
             return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/deploy/remote', methods=['POST'])
+    def deploy_remote():
+        """Deploy container to remote Docker host"""
+        try:
+            data = request.get_json()
+            docker_host = data.get('docker_host')
+            config = data.get('config')
+            ssh_config = data.get('ssh_config')  # New SSH configuration
+            
+            # Check if using SSH tunnel
+            if ssh_config and ssh_config.get('enabled'):
+                # Validate SSH configuration
+                if not ssh_config.get('host'):
+                    return jsonify({'success': False, 'error': 'SSH host is required'}), 400
+                if not ssh_config.get('user'):
+                    return jsonify({'success': False, 'error': 'SSH user is required'}), 400
+                if not ssh_config.get('password') and not ssh_config.get('key_path'):
+                    return jsonify({'success': False, 'error': 'SSH password or key is required'}), 400
+                    
+                # Use SSH tunnel deployment
+                from ssh_docker import SSHRemoteDockerDeployer
+                from docker_config import DockerConfigGenerator
+                
+                generator = DockerConfigGenerator()
+                docker_compose = generator.generate_docker_compose(config)
+                
+                deployer = SSHRemoteDockerDeployer(ssh_config)
+                deployment_result = deployer.deploy(config, docker_compose)
+                
+                if deployment_result['success']:
+                    return jsonify({
+                        'success': True,
+                        'message': deployment_result.get('message', 'Deployment successful'),
+                        'container_name': config.get('name', 'windows')
+                    })
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': deployment_result.get('error', 'Deployment failed')
+                    })
+            
+            # Original TCP deployment (kept for backward compatibility)
+            elif docker_host:
+                if not config:
+                    return jsonify({'success': False, 'error': 'Configuration is required'}), 400
+                
+                # Validate configuration
+                required_fields = ['name', 'username', 'password', 'version']
+                for field in required_fields:
+                    if not config.get(field):
+                        return jsonify({'success': False, 'error': f'{field} is required'}), 400
+                
+                # Generate Docker Compose YAML
+                from docker_config import DockerConfigGenerator
+                generator = DockerConfigGenerator()
+                docker_compose = generator.generate_docker_compose(config)
+                
+                # Deploy to remote Docker host
+                from docker_config import RemoteDockerDeployer
+                deployer = RemoteDockerDeployer(docker_host)
+                deployment_result = deployer.deploy(config, docker_compose)
+                
+                if deployment_result['success']:
+                    return jsonify({
+                        'success': True,
+                        'message': f"Successfully deployed '{config.get('name', 'windows')}' to {docker_host}",
+                        'container_id': deployment_result.get('container_id'),
+                        'container_name': config.get('name', 'windows')
+                    })
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': deployment_result.get('error', 'Deployment failed')
+                    })
+            else:
+                return jsonify({'success': False, 'error': 'Docker host or SSH configuration is required'}), 400
+                
+        except Exception as e:
+            logging.error(f"Remote deployment error: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
     
     @app.route('/api/chat', methods=['POST'])
     @limiter.limit("30 per minute")

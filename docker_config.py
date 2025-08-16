@@ -1,8 +1,10 @@
 import os
-import json
 import yaml
+import json
+import subprocess
+import tempfile
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 class DockerConfigGenerator:
     def __init__(self):
@@ -20,7 +22,7 @@ class DockerConfigGenerator:
         service_config = {
             'image': f"dockurr/windows:{config.get('version', 'latest')}",
             'container_name': config.get('name', 'windows'),
-            'environment': self._generate_environment_vars(config),
+            'environment': self._generate_environment_dict(config),
             'devices': ['/dev/kvm'],
             'cap_add': ['NET_ADMIN'],
             'stop_grace_period': '2m',
@@ -43,7 +45,6 @@ class DockerConfigGenerator:
             service_config['device_cgroup_rules'] = ['c *:* rwm']
 
         compose_config = {
-            'version': '3.8',
             'services': {
                 config.get('name', 'windows'): service_config
             }
@@ -138,17 +139,19 @@ class DockerConfigGenerator:
             service = compose_config['services'][config.get('name', 'windows')]
             service['deploy'] = deploy_config
 
-        return yaml.dump(compose_config, default_flow_style=False)
+        return yaml.dump(compose_config, default_flow_style=False, sort_keys=False, indent=2)
 
-    def _generate_environment_vars(self, config: Dict[str, Any]) -> List[str]:
+    def _generate_environment_vars(self, config: Dict[str, Any], for_env_file: bool = False) -> List[str]:
         """Generate environment variables for the container"""
         env_vars = []
 
         # Basic Windows configuration
         if config.get('username'):
-            env_vars.append(f"USERNAME={config['username']}")
+            username = self._escape_env_value(config['username'], for_env_file)
+            env_vars.append(f"USERNAME={username}")
         if config.get('password'):
-            env_vars.append(f"PASSWORD={config['password']}")
+            password = self._escape_env_value(config['password'], for_env_file)
+            env_vars.append(f"PASSWORD={password}")
 
         # Version selection and keyboard settings
         if config.get('language'):
@@ -239,6 +242,95 @@ class DockerConfigGenerator:
                 env_vars.append(f"LOG_SOURCES={','.join(log_sources)}")
         
         return env_vars
+    
+    def _generate_environment_dict(self, config: Dict[str, Any]) -> Dict[str, str]:
+        """Generate environment variables as dictionary for direct YAML embedding"""
+        env_dict = {}
+        
+        # Basic Windows configuration
+        if config.get('username'):
+            env_dict['USERNAME'] = str(config['username'])
+        if config.get('password'):
+            # Escape $ characters for Docker Compose YAML ($ -> $$)
+            password = str(config['password'])
+            env_dict['PASSWORD'] = password.replace('$', '$$')
+        
+        # Version selection and keyboard settings
+        if config.get('language'):
+            env_dict['LANGUAGE'] = str(config['language'])
+        if config.get('keyboard'):
+            env_dict['KEYBOARD'] = str(config['keyboard'])
+        
+        # System resources
+        if config.get('cpu_cores'):
+            env_dict['CPU_CORES'] = str(config['cpu_cores'])
+        if config.get('ram_size'):
+            env_dict['VERSION'] = str(config['version'])
+        
+        # Storage configuration
+        if config.get('disk_size'):
+            env_dict['DISK_SIZE'] = f"{config['disk_size']}G"
+        
+        # Network configuration
+        if config.get('network_mode') == 'host':
+            env_dict['NETWORK'] = 'host'
+        elif config.get('network_mode') == 'macvlan':
+            env_dict['NETWORK'] = 'macvlan'
+            if config.get('macvlan_container_ip'):
+                env_dict['IP'] = str(config['macvlan_container_ip'])
+        elif config.get('network_mode') == 'static':
+            if config.get('static_ip'):
+                env_dict['IP'] = str(config['static_ip'])
+        
+        # Additional features
+        if config.get('remote_desktop', True):
+            env_dict['RDP'] = 'true'
+        
+        if config.get('web_interface', True):
+            env_dict['VNC'] = 'true'
+        
+        # GPU support
+        if config.get('gpu_support'):
+            env_dict['GPU'] = 'true'
+        
+        # Audio support
+        if config.get('audio_support'):
+            env_dict['AUDIO'] = 'true'
+        
+        # USB support
+        if config.get('usb_support'):
+            env_dict['USB'] = 'true'
+        
+        # File sharing
+        if config.get('file_sharing'):
+            env_dict['SHARE'] = 'true'
+        
+        return env_dict
+    
+    def _escape_env_value(self, value: str, for_env_file: bool = False) -> str:
+        """Escape special characters in environment variable values"""
+        if not isinstance(value, str):
+            return str(value)
+        
+        if for_env_file:
+            # For .env files, use single quotes to prevent variable substitution
+            if '$' in value:
+                # Use single quotes to prevent any variable substitution
+                escaped = value.replace("'", "\\'")
+                return f"'{escaped}'"
+            # For values without $, use double quotes if they contain special characters
+            elif any(char in value for char in [' ', '"', '\\', '&', '|', ';', '(', ')', '<', '>', '`']):
+                escaped = value.replace('"', '\\"')
+                return f'"{escaped}"'
+            return value
+        else:
+            # For Docker Compose YAML, only quote if value contains spaces
+            if ' ' in value:
+                escaped = value.replace('"', '\\"')
+                escaped = f'"{escaped}"'
+                return escaped
+            
+        return value
     
     def _generate_volumes(self, config: Dict[str, Any]) -> List[str]:
         """Generate volume mappings"""
@@ -384,9 +476,15 @@ class DockerConfigGenerator:
         env_content = "# DockWINterface Generated Environment File\n"
         env_content += f"# Generated for container: {config.get('name', 'windows')}\n\n"
         
-        env_vars = self._generate_environment_vars(config)
+        env_vars = self._generate_environment_vars(config, for_env_file=True)
         for var in env_vars:
             env_content += f"{var}\n"
+        
+        # Debug logging for password escaping
+        if config.get('password'):
+            logging.info(f"Original password: {config.get('password')}")
+            escaped_password = self._escape_env_value(config.get('password'), for_env_file=True)
+            logging.info(f"Escaped password: {escaped_password}")
         
         # Additional Docker-specific settings
         env_content += "\n# Container Configuration\n"
@@ -394,6 +492,7 @@ class DockerConfigGenerator:
         env_content += f"RDP_PORT={config.get('rdp_port', '3389')}\n"
         env_content += f"VNC_PORT={config.get('vnc_port', '8006')}\n"
         
+        logging.info(f"Generated .env file content:\n{env_content}")
         return env_content
     
     def validate_macvlan_config(self, config: Dict[str, Any]) -> List[str]:
@@ -541,3 +640,65 @@ class DockerConfigGenerator:
             result['macvlan_script_path'] = script_path
         
         return result
+
+
+class RemoteDockerDeployer:
+    def __init__(self, docker_host: str):
+        self.docker_host = docker_host
+        
+    def deploy(self, config: Dict[str, Any], docker_compose: str, env_file: str = None) -> Dict[str, Any]:
+        """Deploy container to remote Docker host"""
+        try:
+            container_name = config.get('name', 'windows')
+            
+            # Create temporary file for docker-compose
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.yml', delete=False) as compose_file:
+                compose_file.write(docker_compose)
+                compose_path = compose_file.name
+            
+            try:
+                # Set DOCKER_HOST environment variable
+                env = os.environ.copy()
+                env['DOCKER_HOST'] = self.docker_host
+                
+                # Run docker-compose up with the remote host
+                # No --env-file parameter since environment variables are embedded in YAML
+                cmd = ['docker-compose', '-f', compose_path, 'up', '-d']
+                result = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=300)
+                
+                if result.returncode == 0:
+                    # Get container ID
+                    inspect_cmd = ['docker', 'ps', '-q', '-f', f'name={container_name}']
+                    inspect_result = subprocess.run(inspect_cmd, env=env, capture_output=True, text=True)
+                    container_id = inspect_result.stdout.strip() if inspect_result.returncode == 0 else None
+                    
+                    return {
+                        'success': True,
+                        'container_id': container_id,
+                        'output': result.stdout
+                    }
+                else:
+                    return {
+                        'success': False,
+                        'error': f"Docker deployment failed: {result.stderr}",
+                        'output': result.stdout
+                    }
+                    
+            finally:
+                # Clean up temporary file
+                try:
+                    os.unlink(compose_path)
+                except OSError:
+                    pass
+                    
+        except subprocess.TimeoutExpired:
+            return {
+                'success': False,
+                'error': 'Deployment timed out after 5 minutes'
+            }
+        except Exception as e:
+            logging.error(f"Remote deployment error: {str(e)}", exc_info=True)
+            return {
+                'success': False,
+                'error': f"Deployment failed: {str(e)}"
+            }

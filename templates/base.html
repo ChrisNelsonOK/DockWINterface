@@ -116,10 +116,70 @@
                             <input type="password" class="form-control bg-dark text-light" id="openaiKey" placeholder="sk-...">
                             <div class="form-text">Used for AI assistant functionality</div>
                         </div>
+                        
+                        <!-- Connection Method Toggle -->
                         <div class="mb-3">
-                            <label for="dockerHost" class="form-label">Docker Host (Optional)</label>
-                            <input type="text" class="form-control bg-dark text-light" id="dockerHost" placeholder="tcp://localhost:2376">
-                            <div class="form-text">Remote Docker daemon endpoint</div>
+                            <label class="form-label">Docker Connection Method</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="connectionMethod" id="directConnection" value="direct" checked>
+                                <label class="btn btn-outline-danger" for="directConnection">Direct TCP</label>
+                                
+                                <input type="radio" class="btn-check" name="connectionMethod" id="sshConnection" value="ssh">
+                                <label class="btn btn-outline-danger" for="sshConnection">SSH Tunnel (Secure)</label>
+                            </div>
+                        </div>
+                        
+                        <!-- Direct TCP Settings -->
+                        <div id="directSettings">
+                            <div class="mb-3">
+                                <label for="dockerHost" class="form-label">Docker Host</label>
+                                <input type="text" class="form-control bg-dark text-light" id="dockerHost" placeholder="tcp://localhost:2375">
+                                <div class="form-text">Remote Docker daemon endpoint (insecure)</div>
+                            </div>
+                        </div>
+                        
+                        <!-- SSH Settings -->
+                        <div id="sshSettings" style="display: none;">
+                            <div class="mb-3">
+                                <label for="sshHost" class="form-label">SSH Host</label>
+                                <input type="text" class="form-control bg-dark text-light" id="sshHost" placeholder="192.168.1.100">
+                                <div class="form-text">Remote server address</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="sshUser" class="form-label">SSH Username</label>
+                                <input type="text" class="form-control bg-dark text-light" id="sshUser" placeholder="username">
+                            </div>
+                            <div class="mb-3">
+                                <label for="sshPort" class="form-label">SSH Port</label>
+                                <input type="number" class="form-control bg-dark text-light" id="sshPort" value="22" placeholder="22">
+                            </div>
+                            
+                            <!-- SSH Auth Method -->
+                            <div class="mb-3">
+                                <label class="form-label">SSH Authentication</label>
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="sshAuth" id="sshPassword" value="password" checked>
+                                    <label class="btn btn-outline-secondary" for="sshPassword">Password</label>
+                                    
+                                    <input type="radio" class="btn-check" name="sshAuth" id="sshKey" value="key">
+                                    <label class="btn btn-outline-secondary" for="sshKey">SSH Key</label>
+                                </div>
+                            </div>
+                            
+                            <div id="sshPasswordField">
+                                <div class="mb-3">
+                                    <label for="sshPass" class="form-label">SSH Password</label>
+                                    <input type="password" class="form-control bg-dark text-light" id="sshPass" placeholder="password">
+                                </div>
+                            </div>
+                            
+                            <div id="sshKeyField" style="display: none;">
+                                <div class="mb-3">
+                                    <label for="sshKeyPath" class="form-label">SSH Key Path</label>
+                                    <input type="text" class="form-control bg-dark text-light" id="sshKeyPath" placeholder="~/.ssh/id_rsa">
+                                    <div class="form-text">Path to your private SSH key</div>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>

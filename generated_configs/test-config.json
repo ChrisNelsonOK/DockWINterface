@@ -1,10 +1,6 @@
 {
   "name": "test",
-  "version": "11",
+  "version": "win11",
   "username": "user",
-  "password": "pass123",
-  "network_mode": "macvlan",
-  "macvlan_parent": "bond0",
-  "macvlan_subnet": "192.168.1.0/24",
-  "macvlan_gateway": "192.168.1.1"
+  "password": "test123"
 }

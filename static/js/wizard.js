@@ -609,6 +609,8 @@ async function generateConfig() {
     setLoading('generateConfigBtn', true);
     
     try {
+        console.log('Sending config to server:', config);
+        
         const response = await fetch('/api/generate-config', {
             method: 'POST',
             headers: {
@@ -617,14 +619,24 @@ async function generateConfig() {
             body: JSON.stringify(config)
         });
         
+        console.log('Server response status:', response.status);
+        
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorText = await response.text();
+            console.log('Server error response:', errorText);
+            throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
         }
         
         const result = await response.json();
         
         if (result.success) {
             displayGeneratedFiles(result);
+            
+            // Clear password field for security
+            const passwordField = document.getElementById('password');
+            if (passwordField) {
+                passwordField.value = '';
+            }
             
             // Check if rollback protection is active
             if (result.rollback_checkpoint) {
@@ -679,6 +691,17 @@ function displayGeneratedFiles(result) {
         dockerComposeCode.textContent = result.docker_compose;
         envFileCode.textContent = result.env_file;
         filesContainer.style.display = 'block';
+        
+        // Store generated config for deployment
+        window.generatedConfig = {
+            config: formData,
+            docker_compose: result.docker_compose,
+            env_file: result.env_file,
+            container_name: result.container_name
+        };
+        
+        // Check if Docker host is configured
+        updateDeploymentButton();
         
         // Scroll to generated files
         filesContainer.scrollIntoView({ behavior: 'smooth' });
@@ -885,6 +908,187 @@ function removeNetworkInterface(button) {
         nicInterface.remove();
         updateNetworkIndexes();
     }
+}
+
+function updateDeploymentButton() {
+    const deployBtn = document.getElementById('deployRemoteBtn');
+    const connectionMethod = localStorage.getItem('connection_method') || 'direct';
+    
+    if (deployBtn) {
+        let canDeploy = false;
+        let deployTarget = '';
+        
+        if (connectionMethod === 'ssh') {
+            const sshHost = localStorage.getItem('ssh_host');
+            const sshUser = localStorage.getItem('ssh_user');
+            if (sshHost && sshUser) {
+                canDeploy = true;
+                deployTarget = `${sshUser}@${sshHost} (SSH)`;
+            }
+        } else {
+            const dockerHost = localStorage.getItem('docker_host');
+            if (dockerHost && dockerHost.trim()) {
+                canDeploy = true;
+                deployTarget = `${dockerHost} (TCP)`;
+            }
+        }
+        
+        deployBtn.disabled = !canDeploy;
+        deployBtn.title = canDeploy ? `Deploy to ${deployTarget}` : 'Configure connection in Settings first';
+    }
+}
+
+async function deployToRemote() {
+    const connectionMethod = localStorage.getItem('connection_method') || 'direct';
+    let deploymentData = {};
+    
+    if (connectionMethod === 'ssh') {
+        // Validate SSH configuration
+        const sshHost = localStorage.getItem('ssh_host');
+        const sshUser = localStorage.getItem('ssh_user');
+        const sshPort = localStorage.getItem('ssh_port') || '22';
+        const sshAuth = localStorage.getItem('ssh_auth') || 'password';
+        
+        if (!sshHost || !sshUser) {
+            showNotification('Please configure SSH connection in Settings first', 'warning');
+            return;
+        }
+        
+        // Build SSH configuration
+        deploymentData.ssh_config = {
+            enabled: true,
+            host: sshHost,
+            username: sshUser,
+            port: parseInt(sshPort)
+        };
+        
+        if (sshAuth === 'password') {
+            const sshPass = localStorage.getItem('ssh_password');
+            if (!sshPass) {
+                showNotification('SSH password is required', 'warning');
+                return;
+            }
+            deploymentData.ssh_config.password = atob(sshPass);
+        } else {
+            const sshKeyPath = localStorage.getItem('ssh_key_path');
+            if (!sshKeyPath) {
+                showNotification('SSH key path is required', 'warning');
+                return;
+            }
+            deploymentData.ssh_config.key_path = sshKeyPath;
+        }
+    } else {
+        // Direct TCP connection
+        const dockerHost = localStorage.getItem('docker_host');
+        if (!dockerHost || !dockerHost.trim()) {
+            showNotification('Please configure Docker host in Settings first', 'warning');
+            return;
+        }
+        deploymentData.docker_host = dockerHost;
+    }
+    
+    if (!window.generatedConfig) {
+        showNotification('Please generate configuration first', 'error');
+        return;
+    }
+    
+    const deployBtn = document.getElementById('deployRemoteBtn');
+    setLoading('deployRemoteBtn', true);
+    
+    // Add config to deployment data
+    deploymentData.config = window.generatedConfig.config;
+    
+    try {
+        const response = await fetch('/api/deploy-remote', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(deploymentData)
+        });
+        
+        console.log('Deploy response status:', response.status);
+        console.log('Deploy response ok:', response.ok);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('HTTP error response:', errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        
+        const result = await response.json();
+        console.log('Deploy result:', result);
+        
+        if (result.success) {
+            showNotification(result.message, 'success');
+            
+            // Update statistics
+            incrementStat('totalDeployments');
+            
+            // Optionally redirect to deployments page
+            setTimeout(() => {
+                if (confirm('Deployment successful! Would you like to view the deployments page?')) {
+                    window.location.href = '/deployments';
+                }
+            }, 2000);
+        } else {
+            throw new Error(result.error || 'Deployment failed');
+        }
+    } catch (error) {
+        console.error('Error deploying to remote host:', error);
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
+        showNotification('Failed to deploy: ' + (error.message || 'Unknown error'), 'error');
+    } finally {
+        setLoading('deployRemoteBtn', false);
+    }
+}
+
+async function downloadConfig() {
+    if (!window.generatedConfig) {
+        showNotification('Please generate configuration first', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/download-config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(window.generatedConfig.config)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Configuration files saved successfully', 'success');
+            
+            // Create and trigger download links
+            downloadFile('docker-compose.yml', window.generatedConfig.docker_compose);
+            downloadFile('.env', window.generatedConfig.env_file);
+        } else {
+            throw new Error(result.error || 'Download failed');
+        }
+    } catch (error) {
+        console.error('Error downloading config:', error);
+        showNotification('Failed to download configuration: ' + error.message, 'error');
+    }
+}
+
+function downloadFile(filename, content) {
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
 }
 
 function updateNetworkIndexes() {

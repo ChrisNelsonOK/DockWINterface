@@ -66,39 +66,101 @@ function showNotification(message, type = 'info', duration = 5000) {
 // API Key Management
 function saveApiKeys() {
     const openaiKey = document.getElementById('openaiKey').value;
-    const dockerHost = document.getElementById('dockerHost').value;
+    const connectionMethod = document.querySelector('input[name="connectionMethod"]:checked').value;
     
+    // Store API keys in localStorage
     if (openaiKey) {
         localStorage.setItem('openai_api_key', openaiKey);
     }
     
-    if (dockerHost) {
-        localStorage.setItem('docker_host', dockerHost);
-    }
+    // Store connection settings based on method
+    localStorage.setItem('connection_method', connectionMethod);
     
-    showNotification('API keys saved successfully', 'success');
+    if (connectionMethod === 'direct') {
+        const dockerHost = document.getElementById('dockerHost').value;
+        if (dockerHost) {
+            localStorage.setItem('docker_host', dockerHost);
+        }
+    } else if (connectionMethod === 'ssh') {
+        const sshHost = document.getElementById('sshHost').value;
+        const sshUser = document.getElementById('sshUser').value;
+        const sshPort = document.getElementById('sshPort').value;
+        const sshAuth = document.querySelector('input[name="sshAuth"]:checked').value;
+        
+        localStorage.setItem('ssh_host', sshHost);
+        localStorage.setItem('ssh_user', sshUser);
+        localStorage.setItem('ssh_port', sshPort);
+        localStorage.setItem('ssh_auth', sshAuth);
+        
+        if (sshAuth === 'password') {
+            const sshPass = document.getElementById('sshPass').value;
+            if (sshPass) {
+                localStorage.setItem('ssh_password', btoa(sshPass)); // Basic encoding
+            }
+        } else {
+            const sshKeyPath = document.getElementById('sshKeyPath').value;
+            localStorage.setItem('ssh_key_path', sshKeyPath);
+        }
+    }
     
     // Close modal
     const modal = bootstrap.Modal.getInstance(document.getElementById('settingsModal'));
-    if (modal) {
-        modal.hide();
-    }
+    modal.hide();
     
-    // Update status indicators
-    updateSystemStatus();
+    // Show success message
+    showNotification('Settings saved successfully', 'success');
 }
 
 function loadStoredSettings() {
     const openaiKey = localStorage.getItem('openai_api_key');
-    const dockerHost = localStorage.getItem('docker_host');
+    const connectionMethod = localStorage.getItem('connection_method') || 'direct';
     
-    if (openaiKey && document.getElementById('openaiKey')) {
+    if (openaiKey) {
         document.getElementById('openaiKey').value = openaiKey;
     }
     
-    if (dockerHost && document.getElementById('dockerHost')) {
-        document.getElementById('dockerHost').value = dockerHost;
+    // Set connection method
+    document.getElementById(connectionMethod === 'ssh' ? 'sshConnection' : 'directConnection').checked = true;
+    toggleConnectionSettings(connectionMethod);
+    
+    if (connectionMethod === 'direct') {
+        const dockerHost = localStorage.getItem('docker_host');
+        if (dockerHost) {
+            document.getElementById('dockerHost').value = dockerHost;
+        }
+    } else if (connectionMethod === 'ssh') {
+        const sshHost = localStorage.getItem('ssh_host');
+        const sshUser = localStorage.getItem('ssh_user');
+        const sshPort = localStorage.getItem('ssh_port') || '22';
+        const sshAuth = localStorage.getItem('ssh_auth') || 'password';
+        
+        if (sshHost) document.getElementById('sshHost').value = sshHost;
+        if (sshUser) document.getElementById('sshUser').value = sshUser;
+        document.getElementById('sshPort').value = sshPort;
+        
+        document.getElementById(sshAuth === 'key' ? 'sshKey' : 'sshPassword').checked = true;
+        toggleSSHAuthFields(sshAuth);
+        
+        if (sshAuth === 'password') {
+            const sshPass = localStorage.getItem('ssh_password');
+            if (sshPass) {
+                document.getElementById('sshPass').value = atob(sshPass);
+            }
+        } else {
+            const sshKeyPath = localStorage.getItem('ssh_key_path');
+            if (sshKeyPath) document.getElementById('sshKeyPath').value = sshKeyPath;
+        }
     }
+}
+
+function toggleConnectionSettings(method) {
+    document.getElementById('directSettings').style.display = method === 'direct' ? 'block' : 'none';
+    document.getElementById('sshSettings').style.display = method === 'ssh' ? 'block' : 'none';
+}
+
+function toggleSSHAuthFields(authType) {
+    document.getElementById('sshPasswordField').style.display = authType === 'password' ? 'block' : 'none';
+    document.getElementById('sshKeyField').style.display = authType === 'key' ? 'block' : 'none';
 }
 
 // Global Event Listeners
@@ -110,6 +172,20 @@ function initializeGlobalEventListeners() {
             loadStoredSettings();
         });
     }
+    
+    // Connection method toggle
+    document.querySelectorAll('input[name="connectionMethod"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            toggleConnectionSettings(this.value);
+        });
+    });
+    
+    // SSH auth method toggle
+    document.querySelectorAll('input[name="sshAuth"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            toggleSSHAuthFields(this.value);
+        });
+    });
     
     // Handle logs modal show event
     const logsModal = document.getElementById('logsModal');

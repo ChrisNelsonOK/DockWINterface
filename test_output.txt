@@ -1,0 +1,11 @@
+Starting password escaping test...
+Traceback (most recent call last):
+  File "/Users/cnelson/Library/CloudStorage/Dropbox/Mac (2)/Desktop/Dev/Git/ChrisNelsonOK/DockWINterface/test_escaping_fix.py", line 58, in <module>
+    test_password_escaping()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/cnelson/Library/CloudStorage/Dropbox/Mac (2)/Desktop/Dev/Git/ChrisNelsonOK/DockWINterface/test_escaping_fix.py", line 33, in test_password_escaping
+    env_vars = compose_data['services']['windows']['environment']
+               ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+KeyError: 'windows'
+
+❌ Test failed: 'windows'

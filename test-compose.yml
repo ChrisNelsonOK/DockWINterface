@@ -1,0 +1,7 @@
+version: '3.8'
+services:
+  test:
+    image: alpine:latest
+    command: sh -c 'echo "Password is: $PASSWORD" && echo "Username is: $USERNAME"'
+    env_file:
+      - test.env
