@@ -999,7 +999,7 @@ async function deployToRemote() {
     deploymentData.config = window.generatedConfig.config;
     
     try {
-        const response = await fetch('/api/deploy-remote', {
+        const response = await fetch('/api/deploy/remote', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
