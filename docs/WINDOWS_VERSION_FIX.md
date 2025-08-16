@@ -141,6 +141,36 @@ if 'stop_grace_period' in service_config:
 - **SNMP Monitoring**: Enterprise monitoring capability restored
 - **Logging Integration**: Centralized log collection operational
 
+## Windows 11 Enterprise Installation Issue
+
+### Problem
+Fresh Windows 11 Enterprise installations (`VERSION=11e`) fail during the unattended setup process, resulting in UEFI boot menu instead of successful Windows installation.
+
+**Symptoms:**
+- ISO downloads successfully 
+- Container reaches QEMU boot stage
+- Shows "BdsDxe: No bootable option or device was found"
+- Drops to UEFI shell instead of Windows
+
+**Root Cause:**
+The dockurr/windows container's Windows 11 Enterprise unattended installation process has issues with `win11x64-enterprise-eval.xml` configuration.
+
+### Solution Applied
+Changed Windows 11 Enterprise mapping to use Windows 11 Pro installation:
+
+```python
+# In routes.py - version_map
+'11-enterprise': '11',  # Changed from '11e' to '11' - Enterprise has installation issues, using Pro instead
+```
+
+**Verification:**
+- ✅ Windows 10: All versions install successfully
+- ✅ Windows 11 Pro: Installs successfully  
+- ❌ Windows 11 Enterprise: Installation failure (UEFI boot issue)
+
+**Impact:**
+Users selecting "Windows 11 Enterprise" in DockWINterface will receive Windows 11 Pro instead, which installs reliably and provides equivalent functionality for most use cases.
+
 ## Related Files
 - `/opt/DockWINterface/routes.py` - Contains version mapping and normalization logic
 - `/opt/DockWINterface/docker_config.py` - Generates Docker environment variables and device mappings

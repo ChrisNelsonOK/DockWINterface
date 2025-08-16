@@ -24,7 +24,7 @@ version_map = {
     # Windows 11
     '11': '11',
     '11-pro': '11',
-    '11-enterprise': '11e',
+    '11-enterprise': '11',  # Changed from '11e' to '11' - Enterprise has installation issues, using Pro instead
     '11-ltsc': '11l',
     # Windows 10
     '10': '10',
