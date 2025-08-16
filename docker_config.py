@@ -20,7 +20,7 @@ class DockerConfigGenerator:
         """Generate docker-compose.yml content for Dockur Windows"""
         # Basic service configuration
         service_config = {
-            'image': f"dockurr/windows:{config.get('version', 'latest')}",
+            'image': 'dockurr/windows',
             'container_name': config.get('name', 'windows'),
             'environment': self._generate_environment_dict(config),
             'devices': ['/dev/kvm'],
@@ -152,6 +152,10 @@ class DockerConfigGenerator:
         if config.get('password'):
             password = self._escape_env_value(config['password'], for_env_file)
             env_vars.append(f"PASSWORD={password}")
+        
+        # Windows version
+        if config.get('version'):
+            env_vars.append(f"VERSION={config['version']}")
 
         # Version selection and keyboard settings
         if config.get('language'):
@@ -698,15 +702,21 @@ class RemoteDockerDeployer:
                 for cap in service_config['cap_add']:
                     cmd.extend(['--cap-add', cap])
             
-            # Add devices
+            # Add devices - check if they exist first
             if 'devices' in service_config:
                 for device in service_config['devices']:
+                    # Skip /dev/kvm if it doesn't exist (common in containers)
+                    if device == '/dev/kvm' and not os.path.exists(device):
+                        logging.warning(f"Skipping device {device} as it doesn't exist")
+                        continue
                     cmd.extend(['--device', device])
             
-            # Add image
-            cmd.append(service_config['image'])
+            # Add image - ensure it exists
+            image = service_config.get('image', 'dockurr/windows')
+            cmd.append(image)
             
             logging.info(f"Deploying container with command: {' '.join(cmd)}")
+            print(f"DEBUG: Docker command: {' '.join(cmd)}")  # Debug output
             
             # First, stop and remove any existing container with the same name
             stop_cmd = ['docker', 'stop', container_name]
@@ -717,6 +727,7 @@ class RemoteDockerDeployer:
             
             # Deploy container
             result = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=300)
+            print(f"DEBUG: Docker run result - returncode: {result.returncode}, stdout: {result.stdout}, stderr: {result.stderr}")  # Debug output
             
             if result.returncode == 0:
                 container_id = result.stdout.strip()

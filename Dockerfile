@@ -31,8 +31,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application files
 COPY . .
 
-# Create non-root user
+# Create non-root user and add to docker group
 RUN useradd --create-home --shell /bin/bash app \
+    && groupadd -f docker \
+    && usermod -aG docker app \
     && chown -R app:app /app /var/lib/dokwinterface /etc/dokwinterface
 USER app
 
