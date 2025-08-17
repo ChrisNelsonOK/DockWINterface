@@ -40,12 +40,26 @@ version_map = {
     '2000': '2k',
     # Windows Server
     '2025': '2025',
+    '2025-standard': '2025',
+    '2025-datacenter': '2025',
     '2022': '2022',
+    '2022-standard': '2022',
+    '2022-datacenter': '2022',
     '2019': '2019',
+    '2019-standard': '2019',
+    '2019-datacenter': '2019',
     '2016': '2016',
-    '2012': '2012',
-    '2008': '2008',
+    '2016-standard': '2016',
+    '2016-datacenter': '2016',
+    '2012': '2012r2',
+    '2012-standard': '2012r2',
+    '2012-datacenter': '2012r2',
+    '2008': '2008r2',
+    '2008-standard': '2008r2',
+    '2008-datacenter': '2008r2',
     '2003': '2003',
+    '2003-standard': '2003',
+    '2003-datacenter': '2003',
 }
 
 def normalize_version(ver: str) -> str:

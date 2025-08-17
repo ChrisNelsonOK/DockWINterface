@@ -166,6 +166,9 @@ async function sendMessage() {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
+        const timestamp = new Date().toISOString();
+        const filename = `dockwinterface-${timestamp}.json`;
+        
         const result = await response.json();
         
         if (result.success) {

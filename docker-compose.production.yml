@@ -2,9 +2,9 @@
 version: '3.8'
 
 services:
-  dokwinterface:
+  dockwinterface:
     build: .
-    container_name: dokwinterface
+    container_name: dockwinterface
     restart: unless-stopped
     ports:
       - "5000:5000"
@@ -32,7 +32,7 @@ services:
   # Optional: Reverse proxy for production
   nginx:
     image: nginx:alpine
-    container_name: dokwinterface-proxy
+    container_name: dockwinterface-proxy
     restart: unless-stopped
     ports:
       - "80:80"
@@ -41,14 +41,14 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ssl:/etc/nginx/ssl:ro
     depends_on:
-      - dokwinterface
+      - dockwinterface
     networks:
-      - dokwinterface
+      - dockwinterface
     profiles:
       - proxy
 
 networks:
-  dokwinterface:
+  dockwinterface:
     driver: bridge
     ipam:
       config:

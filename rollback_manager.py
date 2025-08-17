@@ -22,8 +22,8 @@ class RollbackManager:
     def __init__(self):
         self.is_linux = platform.system().lower() == 'linux'
         self.revertit_available = self._check_revertit_available()
-        self.snapshot_dir = Path("/var/lib/dokwinterface/snapshots")
-        self.config_dir = Path("/etc/dokwinterface")
+        self.snapshot_dir = Path("/var/lib/dockwinterface/snapshots")
+        self.config_dir = Path("/etc/dockwinterface")
         self.rollback_enabled = False
         self.active_checkpoints = {}
         self.timeout_defaults = {
@@ -158,7 +158,7 @@ class RollbackManager:
 
         # Save Docker compose files if they exist
         compose_files = Path(
-            "/var/lib/dokwinterface/generated_configs"
+            "/var/lib/dockwinterface/generated_configs"
         ).glob("*.yml")
         docker_state['compose_files'] = {}
         for file in compose_files:
@@ -429,7 +429,7 @@ class RollbackManager:
         if 'compose_files' in docker_state:
             for filename, content in docker_state['compose_files'].items():
                 target_path = Path(
-                    f"/var/lib/dokwinterface/generated_configs/{filename}"
+                    f"/var/lib/dockwinterface/generated_configs/{filename}"
                 )
                 target_path.parent.mkdir(parents=True, exist_ok=True)
                 with open(target_path, 'w') as f:

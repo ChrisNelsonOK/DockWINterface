@@ -76,7 +76,7 @@ class DockerConfigGenerator:
             # Static IP configuration
             if config.get('static_ip'):
                 compose_config['networks'] = {
-                    'dokwinterface_net': {
+                    'dockwinterface_net': {
                         'driver': 'bridge',
                         'ipam': {
                             'config': [{
@@ -87,7 +87,7 @@ class DockerConfigGenerator:
                     }
                 }
                 service_config['networks'] = {
-                    'dokwinterface_net': {
+                    'dockwinterface_net': {
                         'ipv4_address': config['static_ip']
                     }
                 }

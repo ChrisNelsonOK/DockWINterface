@@ -68,17 +68,16 @@ DockWINterface is a comprehensive web-based management platform for Windows cont
 ```bash                                                            
 # 1. Clone repository
 git clone <repository-url>
-cd dokwinterface
+cd dockwinterface
 
 # 2. Build and run
-docker build -t dokwinterface .
+docker logs dockwinterface .
 docker run -d \
-  --name dokwinterface \
+  --name dockwinterface \
   -p 5000:5000 \
   -e SESSION_SECRET="$(openssl rand -hex 32)" \
   -e OPENAI_API_KEY="your-openai-key" \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  dokwinterface
+  -v /var/run/docker-compose -f docker-compose.production.yml up -d dockwinterface
 ```
 
 ### Option 2: Direct Deployment
@@ -86,7 +85,7 @@ docker run -d \
 ```bash                                        
 # 1. Clone and install
 git clone <repository-url>
-cd dokwinterface
+cd dockwinterface
 pip install -r requirements.txt
 
 # 2. Configure environment
