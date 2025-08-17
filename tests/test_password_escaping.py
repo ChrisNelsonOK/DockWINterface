@@ -11,7 +11,7 @@ def test_password_escaping():
     generator = DockerConfigGenerator()
     
     # Test password with $ character
-    test_password = "$w33t@55T3a!"
+    test_password = "$test123!"
     
     print("Testing password escaping:")
     print(f"Original password: {test_password}")

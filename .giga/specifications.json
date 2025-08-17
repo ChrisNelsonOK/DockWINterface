@@ -1,0 +1,22 @@
+[
+  {
+    "fileName": "main-overview.mdc",
+    "description": "Complete system overview detailing the Windows container configuration system architecture, component interactions, and high-level workflow"
+  },
+  {
+    "fileName": "rollback-protection-system.mdc",
+    "description": "Detailed documentation of the checkpoint-based rollback protection system, including monitoring algorithms, failure detection, and recovery mechanisms"
+  },
+  {
+    "fileName": "windows-version-mapping.mdc",
+    "description": "Comprehensive documentation of the Windows version mapping system, configuration rules, and validation algorithms for container compatibility"
+  },
+  {
+    "fileName": "network-configuration.mdc",
+    "description": "Detailed documentation of the network configuration algorithms, including MACVLAN setup, multi-NIC support, and Windows-specific network stack requirements"
+  },
+  {
+    "fileName": "ai-configuration-system.mdc",
+    "description": "Documentation of the AI-assisted configuration validation system, including domain-specific rules, optimization algorithms, and Windows environment compatibility checks"
+  }
+]

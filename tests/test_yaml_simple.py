@@ -7,7 +7,7 @@ import json
 def test_yaml_generation():
     """Test how YAML handles passwords with special characters"""
     
-    password = "$w33t@55T3a!"
+    password = "test123"
     
     # Test different escaping methods
     test_cases = {

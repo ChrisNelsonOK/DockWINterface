@@ -1,0 +1,66 @@
+---
+description: Documents network configuration logic for Windows containers including MACVLAN setup and multi-NIC support
+---
+
+
+# network-configuration
+
+Core Network Configuration Components:
+
+1. MACVLAN Configuration Management
+- Parent interface binding with Windows container compatibility checks
+- Automated subnet allocation with host access configuration
+- Network isolation modes:
+  * Bridge mode with host connectivity
+  * Isolated mode for secure environments
+  * Hybrid mode with selective host access
+
+2. Multi-NIC Support System
+- Dynamic network interface addition with custom naming
+- Interface-specific IP assignment and routing
+- Static IP management with validation:
+  * Subnet conflict detection
+  * Gateway reachability checks
+  * DNS configuration validation
+
+3. Windows Network Stack Integration
+- Windows-specific network compatibility validation
+- Network driver mapping:
+  * NAT mode for legacy applications
+  * Transparent mode for direct network access
+  * L2bridge for specialized networking requirements
+
+4. Network Rollback Protection
+- Network change monitoring with 7-minute timeout
+- Automated rollback triggers:
+  * Connectivity loss detection
+  * Interface stability monitoring
+  * Gateway response validation
+- Checkpoint-based recovery for failed network configurations
+
+Importance Score: 85/100
+
+Key Implementation Paths:
+/docker_config.py:
+- Network configuration generation
+- MACVLAN setup logic
+- IP allocation algorithms
+
+/routes.py:
+- Network interface management
+- Multi-NIC configuration handlers
+- Network validation rules
+
+/rollback_manager.py:
+- Network state preservation
+- Connectivity monitoring
+- Automated rollback triggers
+
+/static/js/wizard.js:
+- Network configuration wizard
+- Interface selection logic
+- Network validation UI
+
+$END$
+
+ If you're using this file in context, clearly say in italics in one small line that "Context added by Giga network-configuration" along with specifying exactly what information was used from this file in a human-friendly way, instead of using kebab-case use normal sentence case.

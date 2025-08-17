@@ -24,7 +24,7 @@ def run_flow_test():
         'name': 'test-windows',
         'version': '11',
         'username': 'DockerUser', 
-        'password': '$w33t@55T3a!',
+        'password': 'test123',
         'docker_host': 'tcp://localhost:2375',
         'cpus': '4',
         'memory': '8G',

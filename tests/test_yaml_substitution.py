@@ -11,7 +11,7 @@ pytest.skip("Skipping docker-compose dependent test during unit test runs", allo
 def test_yaml_substitution():
     """Test different ways of escaping $ in YAML environment values"""
     
-    password = "$w33t@55T3a!"
+    password = "$test123"
     
     test_cases = [
         ("Raw string", password),
