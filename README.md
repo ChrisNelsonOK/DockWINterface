@@ -4,6 +4,19 @@
 
 DockWINterface is a comprehensive web-based management platform for Windows containers using the Dockur project. It provides an intuitive interface for configuring, deploying, and managing Windows containers with Docker, featuring advanced networking, enterprise monitoring, and AI-powered assistance.
 
+
+* https://github.com/ChrisNelsonOK/DockWINterface/blob/main/images/1-DockWINterface-Home.png
+* https://github.com/ChrisNelsonOK/DockWINterface/blob/main/images/2-DockWINterface-BasicInfo.png
+* https://github.com/ChrisNelsonOK/DockWINterface/blob/main/images/3-DockWINterface-System.png
+* https://github.com/ChrisNelsonOK/DockWINterface/blob/main/images/4-DockWINterface-Network.png
+* https://github.com/ChrisNelsonOK/DockWINterface/blob/main/images/5-DockWINterface-Storage.png
+* https://github.com/ChrisNelsonOK/DockWINterface/blob/main/images/6-DockWINterface-Review.png
+* https://github.com/ChrisNelsonOK/DockWINterface/blob/main/images/7-DockWINterface-GeneratedConfig.png
+* https://github.com/ChrisNelsonOK/DockWINterface/blob/main/images/8-DockWINterface-Results.png
+
+
+  
+
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![Status](https://img.shields.io/badge/status-production%20ready-green.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
@@ -48,7 +61,7 @@ DockWINterface is a comprehensive web-based management platform for Windows cont
 
 ### Option 1: Docker Deployment (Recommended)
 
-```bash
+```bash                                                            
 # 1. Clone repository
 git clone <repository-url>
 cd dokwinterface
@@ -66,7 +79,7 @@ docker run -d \
 
 ### Option 2: Direct Deployment
 
-```bash
+```bash                                        
 # 1. Clone and install
 git clone <repository-url>
 cd dokwinterface
@@ -83,13 +96,13 @@ gunicorn --bind 0.0.0.0:5000 --workers 4 main:app
 ### Access Application
 Open your browser and navigate to `http://localhost:5000`
 
-## 📖 Documentation
+## 📖 Documentation    
 
 - **[Deployment Guide](DEPLOYMENT.md)**: Complete production deployment instructions
 - **[Changelog](CHANGELOG.md)**: Version history and feature updates
 - **[Configuration Examples](generated_configs/)**: Sample configurations for common setups
 
-## 🛠️ Configuration
+## 🛠️ Configuration    
 
 ### Required Environment Variables
 
@@ -161,7 +174,7 @@ DockWINterface generates production-ready configurations:
 - Monitor Docker socket access
 - Regular security updates
 
-## 📊 Monitoring
+## 📊 Monitoring  
 
 ### Application Monitoring
 - Real-time container status
@@ -175,7 +188,7 @@ DockWINterface generates production-ready configurations:
 - Log aggregation and analysis
 - SNMP trap monitoring
 
-## 🤝 Contributing
+## 🤝 Contributing  
 
 1. Fork the repository
 2. Create a feature branch
@@ -183,7 +196,7 @@ DockWINterface generates production-ready configurations:
 4. Add tests and documentation
 5. Submit a pull request
 
-## 📄 License
+## 📄 License  
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
