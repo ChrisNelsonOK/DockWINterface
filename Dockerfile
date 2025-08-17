@@ -19,8 +19,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Create application directories with proper permissions
-RUN mkdir -p /var/lib/dokwinterface/snapshots /var/lib/dokwinterface/generated_configs /etc/dokwinterface \
-    && chmod -R 755 /var/lib/dokwinterface /etc/dokwinterface
+RUN mkdir -p /var/lib/dockwinterface/snapshots /var/lib/dockwinterface/generated_configs /etc/dockwinterface \
+    && chmod -R 755 /var/lib/dockwinterface /etc/dockwinterface
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
@@ -35,7 +35,7 @@ COPY . .
 RUN useradd --create-home --shell /bin/bash app \
     && groupadd -f docker \
     && usermod -aG docker app \
-    && chown -R app:app /app /var/lib/dokwinterface /etc/dokwinterface
+    && chown -R app:app /app /var/lib/dockwinterface /etc/dockwinterface
 USER app
 
 # Expose port

@@ -82,16 +82,16 @@ export FLASK_ENV="development"  # or "production"
 ### Docker Development
 ```bash
 # Build development image
-docker build -t dokwinterface .
+docker build -t dockwinterface .
 
 # Run with Docker (development)
 docker run -d \
-  --name dokwinterface \
+  --name dockwinterface \
   -p 5000:5000 \
   -e SESSION_SECRET="$(openssl rand -hex 32)" \
   -e OPENAI_API_KEY="your-key" \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  dokwinterface
+  dockwinterface
 
 # Production deployment
 docker-compose -f docker-compose.production.yml up -d
@@ -100,7 +100,7 @@ docker-compose -f docker-compose.production.yml up -d
 ### Testing & Debugging
 ```bash
 # Check application logs
-docker logs dokwinterface
+docker logs dockwinterface
 
 # Test API endpoints
 curl -X POST http://localhost:5000/api/generate-config \
@@ -247,7 +247,7 @@ Configurable log collection from Windows containers:
 docker version
 
 # Verify container logs
-docker logs -f dokwinterface
+docker logs -f dockwinterface
 
 # Test AI assistant (if configured)
 curl -X POST http://localhost:5000/api/chat \

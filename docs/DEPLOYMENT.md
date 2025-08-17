@@ -24,7 +24,7 @@ DockWINterface is a production-ready web application for managing Windows contai
 1. **Clone and Setup**
    ```bash
    git clone <repository-url>
-   cd dokwinterface
+   cd dockwinterface
    pip install -r requirements.txt
    ```
 
@@ -43,18 +43,18 @@ DockWINterface is a production-ready web application for managing Windows contai
 
 1. **Build Container**
    ```bash
-   docker build -t dokwinterface .
+   docker build -t dockwinterface .
    ```
 
 2. **Run Container**
    ```bash
    docker run -d \
-     --name dokwinterface \
+     --name dockwinterface \
      -p 5000:5000 \
      -e SESSION_SECRET="your-secure-session-key" \
      -e OPENAI_API_KEY="your-openai-key" \
      -v /var/run/docker.sock:/var/run/docker.sock \
-     dokwinterface
+     dockwinterface
    ```
 
 ## Production Configuration
@@ -132,7 +132,7 @@ The application generates these configuration files:
 ### Application Logs
 ```bash
 # Application logs
-docker logs dokwinterface
+docker logs dockwinterface
 
 # Container logs (generated configurations)
 docker logs [container-name]
@@ -169,10 +169,10 @@ docker logs [container-name]
 ### Log Analysis
 ```bash
 # Application debug logs
-docker logs dokwinterface 2>&1 | grep ERROR
+docker logs dockwinterface 2>&1 | grep ERROR
 
 # System resource usage
-docker stats dokwinterface
+docker stats dockwinterface
 ```
 
 ## Scaling Considerations
