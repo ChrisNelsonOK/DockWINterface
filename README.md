@@ -16,10 +16,10 @@ DockWINterface is a comprehensive web-based management platform for Windows cont
 
 
   
-
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-v0.9.0-blue.svg)
 ![Status](https://img.shields.io/badge/status-production%20ready-green.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
+
 
 ## ✨ Features
 
