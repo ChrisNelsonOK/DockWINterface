@@ -99,6 +99,15 @@ def register_routes(app, limiter):
     def index():
         """Main dashboard page"""
         return render_template('index.html')
+
+    @app.route('/health')
+    @limiter.exempt  # Exempt from rate limiting for Docker health checks
+    def health():
+        """Health check endpoint for Docker container"""
+        return jsonify({
+            "status": "healthy",
+            "timestamp": int(time.time())
+        }), 200
     
     @app.route('/wizard')
     def wizard():
