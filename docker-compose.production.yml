@@ -4,19 +4,20 @@ version: '3.8'
 services:
   dockwinterface:
     build: .
-    container_name: dockwinterface
+    container_name: DockWINterface
     restart: unless-stopped
     ports:
       - "5000:5000"
     environment:
-      - SESSION_SECRET=${SESSION_SECRET}
+      - SESSION_SECRET=${SESSION_SECRET:-dev_secret_change_in_production}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - FLASK_ENV=production
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./generated_configs:/app/generated_configs
+      - /opt/windows:/opt/windows  # Required for Windows version-specific volume mapping
     networks:
-      - dokwinterface
+      - dockwinterface
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/"]
       interval: 30s

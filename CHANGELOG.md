@@ -1,3 +1,51 @@
+
+## [2.1.0] - 2024-08-28
+
+### 🚀 Major Features Added
+- **Multi-Version Windows Support**: Added automatic volume mapping for different Windows versions
+- **Windows Server 2022 Support**: Full support for Windows Server 2022 Standard and Datacenter editions
+- **Version-Specific Volume Paths**: Automatic path selection based on Windows version
+  - Windows 10/11: `/opt/windows/xfer`
+  - Windows Server 2022: `/opt/windows/xfer2`
+  - Windows Server 2019: `/opt/windows/xfer4`
+  - Windows Server 2025: `/opt/windows/xfer3`
+
+### 🐛 Critical Fixes
+- **Fixed "unknown server OS" error** for Windows Server deployments
+- **Resolved volume mapping conflicts** between different Windows versions
+- **Fixed container permission issues** with volume directory access
+- **Corrected Docker Compose network configuration** (dokwinterface -> dockwinterface)
+
+### 🔧 Technical Improvements
+- Enhanced `DockerConfigGenerator` with intelligent version detection
+- Added `_get_version_specific_volume_path()` method for automatic path selection
+- Implemented `_ensure_volume_directory()` method with fallback logic
+- Updated container configuration to include `/opt/windows` volume mount
+- Fixed container user permissions (uid=1000) for proper volume access
+
+### 📋 Deployment Changes
+- **BREAKING**: Container rebuild required to pick up new volume mapping logic
+- **NEW**: Added `/opt/windows:/opt/windows` volume mount requirement
+- **CHANGED**: Volume directories must be owned by uid=1000 (container user)
+- **UPDATED**: Docker Compose configuration with proper network naming
+
+### 📚 Documentation Updates
+- Updated README.md with multi-version support information
+- Added comprehensive troubleshooting section for multi-version deployments
+- Created detailed deployment update guide (DEPLOYMENT_UPDATE_2024-08-28.md)
+- Enhanced volume mapping strategy documentation
+
+### ⚠️ Breaking Changes
+- Container must be rebuilt and redeployed to use new features
+- `/opt/windows` directory must be mounted into container
+- Windows volume directories require specific ownership (uid=1000)
+
+### 🔄 Migration Required
+- Stop and remove existing container
+- Rebuild Docker image with new code
+- Fix volume directory permissions: `chown -R 1000:1000 /opt/windows/xfer*`
+- Deploy container with updated volume mounts
+
 # Changelog
 
 All notable changes to DockWINterface will be documented in this file.

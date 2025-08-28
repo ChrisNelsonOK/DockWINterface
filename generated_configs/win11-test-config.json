@@ -1,0 +1,9 @@
+{
+  "name": "win11-test",
+  "version": "11",
+  "username": "admin",
+  "password": "SecurePass123!",
+  "ram_size": 4,
+  "cpu_cores": 2,
+  "disk_size": 40
+}

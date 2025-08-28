@@ -1,0 +1,9 @@
+{
+  "name": "win2022-server",
+  "version": "2022",
+  "username": "admin",
+  "password": "SecurePass123!",
+  "ram_size": 4,
+  "cpu_cores": 2,
+  "disk_size": 40
+}

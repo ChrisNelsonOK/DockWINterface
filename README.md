@@ -299,3 +299,68 @@ Look for log messages like:
 - `Auto-selected volume path for version '2022-standard': /opt/windows/xfer2`
 - `Created volume directory: /opt/windows/xfer2`
 
+
+---
+
+## 🔧 Recent Updates (August 28, 2024)
+
+### Windows Server 2022 Support Enhancement
+- **Fixed "unknown server OS" error** for Windows Server deployments
+- **Added automatic volume mapping** for different Windows versions
+- **Enhanced container configuration** with proper volume mounting
+- **Improved permission handling** for multi-version support
+
+### Key Changes Made
+1. **Updated Docker Configuration**: Added `/opt/windows` volume mount to container
+2. **Fixed Volume Permissions**: Corrected ownership for container access (uid=1000)
+3. **Enhanced Version Detection**: Improved Windows version parsing and mapping
+4. **Updated Documentation**: Added comprehensive deployment and troubleshooting guides
+
+### Deployment Requirements
+- **Container Rebuild Required**: New image includes enhanced volume mapping logic
+- **Volume Mount Added**: Container now needs access to `/opt/windows` for version-specific paths
+- **Permission Fix**: Windows volume directories must be owned by uid=1000 (container user)
+
+## 📋 Post-Update Verification
+
+Verify your deployment is working correctly:
+
+```bash
+# Test Windows Server 2022 configuration
+curl -X POST http://localhost:5000/api/generate-config \
+  -H "Content-Type: application/json" \
+  -d '{"name":"test-2022","version":"2022-standard","username":"admin","password":"test123","ram_size":4,"cpu_cores":2,"disk_size":40}' \
+  | jq -r .docker_compose | grep xfer
+
+# Should output: - /opt/windows/xfer2:/storage
+```
+
+```bash
+# Test Windows 11 backward compatibility  
+curl -X POST http://localhost:5000/api/generate-config \
+  -H "Content-Type: application/json" \
+  -d '{"name":"test-11","version":"11-pro","username":"admin","password":"test123","ram_size":4,"cpu_cores":2,"disk_size":40}' \
+  | jq -r .docker_compose | grep xfer
+
+# Should output: - /opt/windows/xfer:/storage
+```
+
+## 🚨 Important Notes
+
+### Volume Directory Structure
+Ensure your `/opt/windows/` directory contains the following subdirectories with proper permissions:
+```bash
+/opt/windows/xfer/     # Windows 10/11 ISOs and files
+/opt/windows/xfer2/    # Windows Server 2022 ISOs and files  
+/opt/windows/xfer3/    # Windows Server 2025 ISOs and files
+/opt/windows/xfer4/    # Windows Server 2019 ISOs and files
+```
+
+### Container Requirements
+- **Docker Socket Access**: Required for container deployment
+- **Volume Access**: Container needs read/write access to `/opt/windows/`
+- **Network Access**: Container must be able to reach target deployment hosts
+- **Proper Ownership**: Windows directories must be owned by uid=1000
+
+For detailed deployment instructions, see `DEPLOYMENT_UPDATE_2024-08-28.md`.
+

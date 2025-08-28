@@ -1,0 +1,9 @@
+{
+  "name": "test-win2022-final",
+  "version": "2022",
+  "username": "admin",
+  "password": "TestPassword123!",
+  "ram_size": 4,
+  "cpu_cores": 2,
+  "disk_size": 40
+}
