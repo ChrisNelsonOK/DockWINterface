@@ -1,4 +1,4 @@
-# DockWINterface Production Docker Compose
+# DockWINterface Production Docker Compose with Traefik Integration
 version: '3.8'
 
 services:
@@ -6,8 +6,6 @@ services:
     build: .
     container_name: DockWINterface
     restart: unless-stopped
-    ports:
-      - "5000:5000"
     environment:
       - SESSION_SECRET=${SESSION_SECRET:-dev_secret_change_in_production}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
@@ -17,7 +15,7 @@ services:
       - ./generated_configs:/app/generated_configs
       - /opt/windows:/opt/windows  # Required for Windows version-specific volume mapping
     networks:
-      - dockwinterface
+      - opt_monitoring  # Required for Traefik integration
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/"]
       interval: 30s
@@ -29,8 +27,16 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    labels:
+      # Traefik configuration for reverse proxy
+      - "traefik.enable=true"
+      - "traefik.http.routers.dockwinterface.rule=Host(`dockwinterface.rectitude.net`)"
+      - "traefik.http.routers.dockwinterface.entrypoints=websecure"
+      - "traefik.http.routers.dockwinterface.tls=true"
+      - "traefik.http.services.dockwinterface.loadbalancer.server.port=5000"
+      - "traefik.http.services.dockwinterface.loadbalancer.server.scheme=http"
 
-  # Optional: Reverse proxy for production
+  # Optional: Reverse proxy for production (not needed when using external Traefik)
   nginx:
     image: nginx:alpine
     container_name: dockwinterface-proxy
@@ -46,9 +52,14 @@ services:
     networks:
       - dockwinterface
     profiles:
-      - proxy
+      - proxy-standalone  # Only enabled when not using Traefik
 
 networks:
+  # Use external monitoring network for Traefik integration
+  opt_monitoring:
+    external: true
+  
+  # Fallback network for standalone deployment
   dockwinterface:
     driver: bridge
     ipam:
