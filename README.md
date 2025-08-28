@@ -247,3 +247,55 @@ For support and questions:
 
 # ⚡ DockWINterface 
 Making Windows container management simple and powerful.
+
+## 🚀 Multi-Version Windows Support
+
+DockWINterface now supports automatic volume mapping for different Windows versions:
+
+### Supported Windows Versions & Volume Mappings
+
+| Windows Version | Volume Mount Path | Description |
+|----------------|------------------|-------------|
+| Windows 10 (All editions) | `/opt/windows/xfer` | Home, Pro, Enterprise, IoT |
+| Windows 11 (All editions) | `/opt/windows/xfer` | Home, Pro, Enterprise, IoT |
+| Windows Server 2022 | `/opt/windows/xfer2` | Standard, Datacenter |
+| Windows Server 2019 | `/opt/windows/xfer4` | Standard, Datacenter |
+| Windows Server 2025 | `/opt/windows/xfer3` | Standard, Datacenter |
+
+### Automatic Volume Selection
+
+The system automatically selects the appropriate volume path based on the selected Windows version:
+
+- **No manual configuration required** - volume paths are assigned automatically
+- **Concurrent deployments supported** - multiple Windows versions can run simultaneously
+- **ISO/file isolation** - each version uses its dedicated volume mount
+- **Backward compatible** - existing Windows 11 deployments continue to work
+
+### Manual Volume Override
+
+If you need to use a custom volume path, you can still specify it manually in the "Data Volume" field during deployment.
+
+### Troubleshooting Multi-Version Deployments
+
+If you encounter issues with Windows Server deployments:
+
+1. **Verify volume directories exist:**
+   ```bash
+   ls -la /opt/windows/
+   # Should show xfer, xfer2, xfer3, xfer4 directories
+   ```
+
+2. **Check permissions:**
+   ```bash
+   chmod 755 /opt/windows/xfer*
+   ```
+
+3. **View deployment logs:**
+   ```bash
+   docker logs DockWINterface
+   ```
+
+Look for log messages like:
+- `Auto-selected volume path for version '2022-standard': /opt/windows/xfer2`
+- `Created volume directory: /opt/windows/xfer2`
+

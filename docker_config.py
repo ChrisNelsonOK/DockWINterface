@@ -397,13 +397,62 @@ class DockerConfigGenerator:
             
         return value
     
+    def _ensure_volume_directory(self, volume_path: str) -> bool:
+        """Ensure the volume directory exists with proper permissions"""
+        try:
+            import os
+            if not os.path.exists(volume_path):
+                os.makedirs(volume_path, mode=0o755, exist_ok=True)
+                logging.info(f"Created volume directory: {volume_path}")
+            
+            # Ensure proper permissions
+            os.chmod(volume_path, 0o755)
+            return True
+        except Exception as e:
+            logging.error(f"Failed to create/setup volume directory {volume_path}: {e}")
+            return False
+
+    def _get_version_specific_volume_path(self, version: str) -> str:
+        """Get the appropriate volume path based on Windows version"""
+        if not version:
+            return "/opt/windows/xfer"  # Default fallback
+            
+        version_lower = version.lower()
+        
+        # Windows Server 2022 variants
+        if any(v in version_lower for v in ['2022', 'server-2022']):
+            return "/opt/windows/xfer2"
+        
+        # Windows Server 2025 variants  
+        elif any(v in version_lower for v in ['2025', 'server-2025']):
+            return "/opt/windows/xfer3"
+        
+        # Windows Server 2019 variants
+        elif any(v in version_lower for v in ['2019', 'server-2019']):
+            return "/opt/windows/xfer4"
+        
+        # All Windows 10 and 11 variants use the original path
+        else:
+            return "/opt/windows/xfer"
+    
     def _generate_volumes(self, config: Dict[str, Any]) -> List[str]:
-        """Generate volume mappings"""
+        """Generate volume mappings with automatic version-specific paths"""
         volumes = []
         
-        # Data volume for persistence
+        # Auto-select data volume based on Windows version if not explicitly provided
         if config.get('data_volume'):
+            # Use explicitly provided data volume
             volumes.append(f"{config['data_volume']}:/storage")
+        else:
+            # Auto-select based on Windows version
+            version = config.get('version', '')
+            auto_volume_path = self._get_version_specific_volume_path(version)
+            # Ensure the volume directory exists
+            if not self._ensure_volume_directory(auto_volume_path):
+                logging.warning(f"Failed to create volume directory {auto_volume_path}, using default")
+                auto_volume_path = "/opt/windows/xfer"
+            volumes.append(f"{auto_volume_path}:/storage")
+            logging.info(f"Auto-selected volume path for version '{version}': {auto_volume_path}")
         
         # Additional volumes
         if config.get('additional_volumes'):
