@@ -76,3 +76,11 @@ coverage.xml
 .mypy_cache/
 .dmypy.json
 dmypy.json
+# Generated configs containing potentially sensitive data (added 2024-08-28)
+generated_configs/*-config.json
+generated_configs/*-compose.yml
+generated_configs/*.env
+
+# Keep example configs
+!generated_configs/test-config.json
+!generated_configs/*-example-config.json
