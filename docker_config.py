@@ -405,11 +405,17 @@ class DockerConfigGenerator:
                 os.makedirs(volume_path, mode=0o755, exist_ok=True)
                 logging.info(f"Created volume directory: {volume_path}")
             
-            # Ensure proper permissions
-            os.chmod(volume_path, 0o755)
+            # Only try to change permissions if we can (don't fail if we can't)
+            try:
+                os.chmod(volume_path, 0o755)
+                logging.debug(f"Updated permissions for volume directory: {volume_path}")
+            except PermissionError:
+                # Directory exists and we have access, just log and continue
+                logging.debug(f"Volume directory {volume_path} exists with current permissions")
+            
             return True
         except Exception as e:
-            logging.error(f"Failed to create/setup volume directory {volume_path}: {e}")
+            logging.warning(f"Could not create volume directory {volume_path}: {e}")
             return False
 
     def _get_version_specific_volume_path(self, version: str) -> str:
