@@ -184,6 +184,9 @@ class DockerConfigGenerator:
 
         if config.get('debug', False):
             env_vars.append("DEBUG=Y")
+        
+        # Use proper RFC 1918 private IP for internal VM network (instead of Microsoft public IP 20.20.20.21)
+        env_vars.append("VM_NET_IP=192.254.254.21")
 
         # Network configuration
         if config.get('dns_servers'):
@@ -785,6 +788,9 @@ class RemoteDockerDeployer:
                     cmd.extend(['-p', port])
             
             # Add environment variables
+                    # Use proper RFC 1918 private IP for internal VM network instead of Microsoft public IP space
+                    if "VM_NET_IP" not in service_config.get("environment", {}):
+                        cmd_parts.extend(["-e", "VM_NET_IP=192.254.254.21"])
             if 'environment' in service_config:
                 for key, value in service_config['environment'].items():
                     # Ensure value is a string and properly formatted

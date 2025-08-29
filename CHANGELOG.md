@@ -1,6 +1,11 @@
 
 ## v0.9.1 (2025-08-29)
 
+### Network Subnet Update
+- **Changed internal VM network**: Updated from 192.168.100.0/24 to 192.254.254.0/24 to avoid conflicts
+- **VM IP**: Windows VMs now use 192.254.254.21 internally (was 192.168.100.21)
+- **Bridge Gateway**: Internal gateway now 192.254.254.1 (was 192.168.100.1)
+
 ### Network Connectivity Fixes
 - **Fixed macvlan network connection**: Containers now properly connect to macvlan networks with assigned IP addresses
 - **Post-deployment network handling**: Added automatic bridge→macvlan network switching for containers
