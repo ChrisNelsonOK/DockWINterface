@@ -139,6 +139,10 @@ def register_routes(app, limiter):
             
             # Normalize Windows version value from UI to backend expected flag
             data = apply_version_mapping(data)
+            # Map network_type to network_mode for API compatibility
+            if 'network_type' in data and 'network_mode' not in data:
+                data['network_mode'] = data['network_type']
+
             print(f"DEBUG: After normalization, data['version'] = {data.get('version')}")
             
             # Check if rollback protection is enabled
@@ -268,6 +272,10 @@ def register_routes(app, limiter):
             data = request.get_json()
             # Ensure version is normalized before saving
             data = apply_version_mapping(data)
+            # Map network_type to network_mode for API compatibility
+            if 'network_type' in data and 'network_mode' not in data:
+                data['network_mode'] = data['network_type']
+
             print(f"DEBUG: After normalization for save, data['version'] = {data.get('version')}")
             config_generator.save_config_files(data)
 
@@ -399,6 +407,10 @@ def register_routes(app, limiter):
             data = request.get_json()
             # Normalize version before validation
             data = apply_version_mapping(data)
+            # Map network_type to network_mode for API compatibility
+            if 'network_type' in data and 'network_mode' not in data:
+                data['network_mode'] = data['network_type']
+
             print(f"DEBUG: After normalization for validation, data['version'] = {data.get('version')}")
             validation_result = config_generator.validate_config(data)
 

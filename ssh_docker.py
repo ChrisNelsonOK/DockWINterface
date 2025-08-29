@@ -359,6 +359,32 @@ class SSHRemoteDockerDeployer:
                 
                 # Success - get container info
                 container_id = output.strip()
+
+                # Handle post-creation network connection for macvlan via SSH
+                if (config.get("network_mode") == "macvlan" and config.get("macvlan_ip") and
+                    service_config.get("network_mode") != "macvlan"):
+                    # Container was created with bridge network, now connect to macvlan via SSH
+                    network_name = config.get("macvlan_network_name", "macvlan")
+                    macvlan_ip = config["macvlan_ip"]
+                    
+                    logging.info(f"Connecting container to macvlan network {network_name} with IP {macvlan_ip} via SSH")
+                    
+                    # Disconnect from bridge network first
+                    disconnect_ssh_cmd = f"docker network disconnect bridge {container_name}"
+                    stdin, stdout, stderr = ssh_client.exec_command(disconnect_ssh_cmd)
+                    stdout.read()  # Wait for completion
+                    
+                    # Connect to macvlan network with specific IP
+                    connect_ssh_cmd = f"docker network connect --ip {macvlan_ip} {network_name} {container_name}"
+                    stdin, stdout, stderr = ssh_client.exec_command(connect_ssh_cmd)
+                    connect_output = stdout.read().decode()
+                    connect_error = stderr.read().decode()
+                    
+                    if connect_error:
+                        logging.warning(f"Failed to connect to macvlan network via SSH: {connect_error}")
+                    else:
+                        logging.info(f"Successfully connected container to macvlan network with IP {macvlan_ip} via SSH")
+
                 logging.info(f"Container deployed successfully with ID: {container_id}")
                 
                 # Get container details and check ports

@@ -94,9 +94,6 @@ class DockerConfigGenerator:
 
         elif config.get('network_mode') == 'none':
             service_config['network_mode'] = 'none'
-            print(f"DEBUG: Checking network_mode: {config.get('network_mode')}")
-            print(f"DEBUG: Available config keys: {list(config.keys())}")
-
         elif config.get('network_mode') == 'macvlan':
             # For macvlan, reference the external network
             network_name = config.get('macvlan_network_name', 'macvlan')
@@ -289,9 +286,6 @@ class DockerConfigGenerator:
         # Network configuration
         if config.get('network_mode') == 'host':
             env_dict['NETWORK'] = 'host'
-            print(f"DEBUG: Checking network_mode: {config.get('network_mode')}")
-            print(f"DEBUG: Available config keys: {list(config.keys())}")
-
         elif config.get('network_mode') == 'macvlan':
             env_dict['NETWORK'] = 'macvlan'
             if config.get('macvlan_container_ip'):
@@ -842,28 +836,6 @@ class RemoteDockerDeployer:
             
             if result.returncode == 0:
                 container_id = result.stdout.strip()
-
-                # Handle post-creation network connection for macvlan
-                if (config.get("network_mode") == "macvlan" and config.get("macvlan_ip") and
-                    service_config.get("network_mode") != "macvlan"):
-                    # Container was created with bridge network, now connect to macvlan
-                    network_name = config.get("macvlan_network_name", "macvlan")
-                    macvlan_ip = config["macvlan_ip"]
-                    
-                    logging.info(f"Connecting container to macvlan network {network_name} with IP {macvlan_ip}")
-                    
-                    # Disconnect from bridge network first
-                    disconnect_cmd = ["docker", "network", "disconnect", "bridge", container_name]
-                    disconnect_result = subprocess.run(disconnect_cmd, env=env, capture_output=True, text=True, timeout=30)
-                    
-                    # Connect to macvlan network with specific IP
-                    connect_cmd = ["docker", "network", "connect", "--ip", macvlan_ip, network_name, container_name]
-                    connect_result = subprocess.run(connect_cmd, env=env, capture_output=True, text=True, timeout=30)
-                    
-                    if connect_result.returncode != 0:
-                        logging.warning(f"Failed to connect to macvlan network: {connect_result.stderr}")
-                    else:
-                        logging.info(f"Successfully connected container to macvlan network with IP {macvlan_ip}")
                 
                 return {
                     'success': True,

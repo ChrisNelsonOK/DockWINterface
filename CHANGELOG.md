@@ -1,4 +1,24 @@
 
+## v0.9.1 (2025-08-29)
+
+### Network Connectivity Fixes
+- **Fixed macvlan network connection**: Containers now properly connect to macvlan networks with assigned IP addresses
+- **Post-deployment network handling**: Added automatic bridge→macvlan network switching for containers
+- **Enhanced SSH deployment**: Network connection logic now works for both local and remote deployments  
+- **Improved troubleshooting**: Added comprehensive network troubleshooting documentation
+
+### Bug Fixes
+- Resolved issue where containers deployed with bridge network weren't automatically connected to macvlan
+- Fixed connectivity problems for Windows containers on dedicated IP addresses
+- Ensured VNC (port 8006) and RDP (port 3389) accessibility on macvlan networks
+
+### Technical Improvements
+- Enhanced deployment logic in `docker_config.py` and `ssh_docker.py`
+- Added automatic network disconnection/connection during deployment
+- Improved logging for network connection processes
+
+
+
 ## [2.1.0] - 2024-08-28
 
 ### 🚀 Major Features Added

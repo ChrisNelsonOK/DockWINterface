@@ -210,3 +210,45 @@ Ensure compliance with:
 ---
 
 For additional support or questions, refer to the project documentation or submit an issue to the repository.
+
+## Network Troubleshooting
+
+### Macvlan Network Connection Issues
+
+**Problem**: Containers deployed via DockWINterface are not accessible on their assigned IP addresses.
+
+**Symptoms**: 
+- Container runs successfully but ports (VNC 8006, RDP 3389) are not accessible
+- Cannot ping the container IP address  
+- Container does not appear in Portainer with expected port mappings
+
+**Root Cause**: Container was connected to the default bridge network instead of the macvlan network.
+
+**Automatic Fix**: DockWINterface v0.9.0+ automatically handles this by:
+1. Creating containers with bridge network initially (for compatibility)
+2. Post-deployment disconnection from bridge network
+3. Connection to macvlan network with specified IP address
+
+**Manual Fix** (if needed):
+```bash
+# Verify current network configuration
+docker inspect CONTAINER_NAME --format='{{json .NetworkSettings.Networks}}' | jq .
+
+# Fix network connection
+docker stop CONTAINER_NAME
+docker network disconnect bridge CONTAINER_NAME  
+docker network connect --ip=10.224.125.195 macvlan CONTAINER_NAME
+docker start CONTAINER_NAME
+
+# Verify fix
+ping 10.224.125.195
+curl -I http://10.224.125.195:8006
+```
+
+**Prevention**: Ensure macvlan network configuration includes:
+- `macvlan_ip`: Target IP address for container
+- `macvlan_network_name`: Name of macvlan network (default: 'macvlan')  
+- `network_mode`: Set to 'macvlan'
+
+This ensures DockWINterface automatically handles the network connection during deployment.
+
