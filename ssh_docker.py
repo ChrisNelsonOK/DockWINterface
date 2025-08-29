@@ -406,6 +406,12 @@ class SSHRemoteDockerDeployer:
                 
                 return {
                     'success': True,
+                # Apply post-deployment network fix for macvlan connectivity
+                from docker_config import DockerConfigGenerator
+                network_fixer = DockerConfigGenerator()
+                network_fix = network_fixer.fix_container_network_post_deployment(config)
+                logging.info(f"SSH Post-deployment network fix: {network_fix}")
+
                     'message': f"Container '{container_name}' deployed successfully via SSH to {self.ssh_config['host']}",
                     'container_name': container_name,
                     'container_id': container_id,

@@ -894,3 +894,63 @@ class RemoteDockerDeployer:
                 'success': False,
                 'error': f"Deployment failed: {str(e)}"
             }
+
+    def fix_container_network_post_deployment(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Universal network fixer that runs after deployment to ensure containers
+        are connected to the correct network, regardless of deployment method.
+        """
+        try:
+            container_name = config.get('name', 'windows')
+            
+            # Check if this is a macvlan configuration that needs network fixing
+            if (config.get('network_mode') == 'macvlan' and config.get('macvlan_ip')):
+                network_name = config.get('macvlan_network_name', 'macvlan')
+                macvlan_ip = config['macvlan_ip']
+                
+                logging.info(f"Post-deployment network check for {container_name}")
+                
+                # Check current network configuration
+                inspect_cmd = ['docker', 'inspect', container_name, '--format={{json .NetworkSettings.Networks}}']
+                result = subprocess.run(inspect_cmd, capture_output=True, text=True, timeout=30)
+                
+                if result.returncode == 0:
+                    import json
+                    networks = json.loads(result.stdout)
+                    
+                    # Check if container is on macvlan network with correct IP
+                    macvlan_network = networks.get(network_name)
+                    if not macvlan_network or macvlan_network.get('IPAddress') != macvlan_ip:
+                        logging.info(f"Container {container_name} needs network fix - connecting to {network_name} with IP {macvlan_ip}")
+                        
+                        # Stop container first
+                        subprocess.run(['docker', 'stop', container_name], capture_output=True, timeout=30)
+                        
+                        # Disconnect from bridge network if connected
+                        if 'bridge' in networks:
+                            subprocess.run(['docker', 'network', 'disconnect', 'bridge', container_name], 
+                                         capture_output=True, timeout=30)
+                        
+                        # Connect to macvlan network
+                        connect_cmd = ['docker', 'network', 'connect', '--ip', macvlan_ip, network_name, container_name]
+                        connect_result = subprocess.run(connect_cmd, capture_output=True, text=True, timeout=30)
+                        
+                        # Start container
+                        subprocess.run(['docker', 'start', container_name], capture_output=True, timeout=30)
+                        
+                        if connect_result.returncode == 0:
+                            logging.info(f"Successfully fixed network for {container_name}")
+                            return {'success': True, 'message': 'Network configuration fixed'}
+                        else:
+                            logging.error(f"Failed to fix network: {connect_result.stderr}")
+                            return {'success': False, 'error': f'Network fix failed: {connect_result.stderr}'}
+                    else:
+                        logging.info(f"Container {container_name} already has correct network configuration")
+                        return {'success': True, 'message': 'Network already correctly configured'}
+                
+            return {'success': True, 'message': 'No network fix needed'}
+            
+        except Exception as e:
+            logging.error(f"Post-deployment network fix error: {str(e)}")
+            return {'success': False, 'error': f'Network fix failed: {str(e)}'}
+
