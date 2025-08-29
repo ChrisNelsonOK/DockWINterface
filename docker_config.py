@@ -310,6 +310,9 @@ class DockerConfigGenerator:
         if config.get('web_interface', True):
             env_dict['VNC'] = 'true'
         
+        # Use proper RFC 1918 private IP for internal VM network
+        env_dict["VM_NET_IP"] = "192.254.254.21"
+        
         # GPU support
         if config.get('gpu_support'):
             env_dict['GPU'] = 'true'

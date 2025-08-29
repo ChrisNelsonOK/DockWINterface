@@ -255,7 +255,6 @@ class SSHRemoteDockerDeployer:
                 # Add environment variables
                     # Use proper RFC 1918 private IP for internal VM network instead of Microsoft public IP space
                     if "VM_NET_IP" not in service_config.get("environment", {}):
-                        cmd_parts.extend(["-e", "VM_NET_IP=192.254.254.21"])
                 if 'environment' in service_config:
                     for key, value in service_config['environment'].items():
                         # Ensure value is a string and escape for shell
