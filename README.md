@@ -131,14 +131,14 @@ python -c "import secrets; print(secrets.token_hex(32))"
 - **Backend**: Flask with Gunicorn WSGI server
 - **Frontend**: Bootstrap 5 with vanilla JavaScript
 - **Configuration**: YAML-based Docker Compose generation
-- **AI Integration**: OpenAI GPT-4o API
+- **AI Integration**: OpenAI GPT-4o API (work in progress)
 - **Deployment**: Docker containerization with health checks
 
 ### Key Components
 - **DockerConfigGenerator**: Advanced Docker configuration creation
-- **AIAssistant**: Intelligent guidance system
+- **AI Assistant**: Intelligent guidance system (work in progress)
 - **Configuration Wizard**: Multi-step setup interface
-- **Enterprise Services**: SNMP, WMI, and logging integration
+- **Enterprise Services**: SNMP, WMI, and logging integration (work in progress)
 
 ## 📦 Generated Configurations
 
@@ -146,18 +146,18 @@ DockWINterface generates production-ready configurations:
 
 ### Docker Compose Features
 - Windows container orchestration
-- Network bridge configuration
-- Volume mounting
+- Network bridge configuration including macvlan option
+- Volume mounting - save system files in Docker volume
 - Service health checks
 - Environment variable management
 
 ### Advanced Networking
-- Static IP address assignment
+- DHCP & Static IP address assignment
 - Multiple network interface support
 - Custom subnet configuration
-- DHCP and static IP mixed environments
+- Macvlan - put your appliance directly on an external VLAN/network
 
-### Enterprise Services
+### Enterprise Services (work in progress)
 - SNMP agent configuration
 - WMI service setup
 - Centralized logging collection
@@ -242,6 +242,7 @@ For support and questions:
 - Check the [Deployment Guide](DEPLOYMENT.md) for common issues
 - Review application logs for troubleshooting
 - Submit issues to the repository
+- Want to get involved? We welcome it!
 
 ---
 
@@ -357,7 +358,7 @@ Ensure your `/opt/windows/` directory contains the following subdirectories with
 ```
 
 ### Container Requirements
-- **Docker Socket Access**: Required for container deployment
+- **Docker Socket or SSH Access**: Required for container deployment automatically (you can simply generate the compose file and deploy manually)
 - **Volume Access**: Container needs read/write access to `/opt/windows/`
 - **Network Access**: Container must be able to reach target deployment hosts
 - **Proper Ownership**: Windows directories must be owned by uid=1000

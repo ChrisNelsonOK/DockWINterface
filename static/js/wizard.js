@@ -450,6 +450,34 @@ function removeVolumeMount(button) {
     volumeMount.remove();
 }
 
+// Storage Configuration Functions
+function toggleStorageType() {
+    const hostRadio = document.getElementById('storageTypeHost');
+    const hostConfig = document.getElementById('hostDirectoryConfig');
+    const dataVolumeInput = document.getElementById('dataVolume');
+    
+    if (hostRadio && hostConfig) {
+        if (hostRadio.checked) {
+            hostConfig.style.display = 'block';
+            if (dataVolumeInput) {
+                dataVolumeInput.required = true;
+            }
+        } else {
+            hostConfig.style.display = 'none';
+            if (dataVolumeInput) {
+                dataVolumeInput.required = false;
+                dataVolumeInput.value = ''; // Clear the value when switching to Docker volume
+            }
+        }
+    }
+}
+
+function toggleFileSharing() {
+    // This function can be used for future file sharing configuration options
+    // For now, the checkbox state is sufficient
+    console.log('File sharing toggled');
+}
+
 function collectVolumeMounts() {
     const volumeMounts = [];
     const mounts = document.querySelectorAll('.volume-mount');
@@ -555,7 +583,9 @@ function generateConfigurationReview() {
             <div class="col-md-6">
                 <h6><i class="fas fa-hdd me-2"></i>Storage Configuration</h6>
                 <table class="table table-dark table-sm">
-                    <tr><td>Data Volume:</td><td>${config.data_volume || 'None'}</td></tr>
+                    <tr><td>OS Storage Type:</td><td><strong>${config.storage_type === 'host_directory' ? 'Host Directory' : 'Docker Volume (Default)'}</strong></td></tr>
+                    ${config.storage_type === 'host_directory' ? `<tr><td>Host Directory:</td><td>${config.data_volume || 'Not specified'}</td></tr>` : ''}
+                    <tr><td>File Sharing:</td><td>${config.enable_file_sharing ? '<span class="text-success">Enabled</span>' : '<span class="text-muted">Disabled</span>'}</td></tr>
                     <tr><td>Additional Volumes:</td><td>${config.additional_volumes ? config.additional_volumes.length : 0} mount(s)</td></tr>
                 </table>
                 ${config.additional_volumes && config.additional_volumes.length > 0 ? `

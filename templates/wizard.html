@@ -464,11 +464,46 @@
                         <h5><i class="fas fa-hdd me-2"></i>Storage Configuration</h5>
                     </div>
                     <div class="card-body">
+                        <!-- OS Image Storage -->
                         <div class="row">
                             <div class="col-12 mb-3">
-                                <label for="dataVolume" class="form-label">Data Volume (Optional)</label>
-                                <input type="text" class="form-control bg-dark text-light" id="dataVolume" name="data_volume" placeholder="/host/path">
-                                <div class="form-text">Host directory to mount as data storage</div>
+                                <h6 class="text-primary mb-3"><i class="fas fa-database me-2"></i>OS Image Storage</h6>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" id="storageTypeVolume" name="storage_type" value="docker_volume" checked onchange="toggleStorageType()">
+                                    <label class="form-check-label" for="storageTypeVolume">
+                                        <strong>Docker Volume (Recommended)</strong>
+                                    </label>
+                                    <div class="form-text text-muted">Managed by Docker, portable and secure. Best for production deployments.</div>
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="radio" id="storageTypeHost" name="storage_type" value="host_directory" onchange="toggleStorageType()">
+                                    <label class="form-check-label" for="storageTypeHost">
+                                        <strong>Host Directory</strong>
+                                    </label>
+                                    <div class="form-text text-muted">Store on host filesystem for easier access and backup.</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="hostDirectoryConfig" class="row" style="display: none;">
+                            <div class="col-12 mb-3">
+                                <label for="dataVolume" class="form-label">Host Directory Path *</label>
+                                <input type="text" class="form-control bg-dark text-light" id="dataVolume" name="data_volume" placeholder="/opt/windows-storage">
+                                <div class="form-text">Host directory to mount for OS image storage</div>
+                            </div>
+                        </div>
+                        
+                        <!-- File Sharing -->
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <h6 class="text-success mb-3"><i class="fas fa-share-alt me-2"></i>File Sharing (Optional)</h6>
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="enableFileSharing" name="enable_file_sharing" onchange="toggleFileSharing()">
+                                    <label class="form-check-label" for="enableFileSharing">
+                                        Enable file sharing between host and container
+                                    </label>
+                                </div>
+                                <div class="form-text text-muted">Allows you to transfer files to/from the Windows container using host directories.</div>
                             </div>
                         </div>
                         <div class="row">

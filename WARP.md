@@ -16,6 +16,14 @@ DockWINterface is a production-ready web-based management platform for Windows c
 - **Monitoring**: Prometheus Flask Exporter for metrics
 - **Security**: Flask-Limiter for rate limiting, session-based authentication
 
+### Application Structure
+- **Direct Flask Application**: Uses app.py for development and main.py for production
+- **Route Management**: Centralized in routes.py with function-based views
+- **Session Handling**: Flask sessions with secure cookies using SESSION_SECRET
+- **Rate Limiting**: Flask-Limiter for API and UI requests (200/day, 50/hour)
+- **Prometheus Metrics**: /metrics endpoint with custom container counters
+- **Async Processing**: Background threads for deployment operations
+
 ### Key Components
 
 #### DockerConfigGenerator (`docker_config.py`)
@@ -54,6 +62,55 @@ Secure remote Docker deployment via SSH tunnels:
 5. **Optional AI Analysis** → GPT-4o provides recommendations
 6. **File Output** → Generated configs saved to `generated_configs/`
 
+## Development Environment Setup
+
+### Python Environment
+```bash
+# Create a virtual environment
+python -m venv venv
+
+# Activate the virtual environment (Linux/macOS)
+source venv/bin/activate
+
+# Activate the virtual environment (Windows)
+venv\Scripts\activate
+
+# Install dependencies with pip
+pip install -r requirements.txt
+
+# Alternative with uv (faster dependency manager)
+pip install uv
+uv pip install -r requirements.txt
+```
+
+### Environment Variables
+```bash
+# Generate secure session secret
+python -c "import secrets; print(secrets.token_hex(32))"
+
+# Set required environment variables
+export SESSION_SECRET="your-generated-session-key"
+export OPENAI_API_KEY="your-openai-key"  # Optional for AI features
+export FLASK_ENV="development"  # or "production"
+export FLASK_DEBUG=1  # Enable debug mode during development
+```
+
+### Dependency Management
+```bash
+# Use uv for dependency management
+uv pip install -r requirements.txt
+
+# Update a specific package
+uv pip install --upgrade flask
+
+# Export requirements file from pyproject.toml
+uv pip export -r requirements.txt pyproject.toml
+
+# Check for security vulnerabilities
+pip install pip-audit
+pip-audit
+```
+
 ## Development Commands
 
 ### Local Development
@@ -68,15 +125,21 @@ flask run --host=0.0.0.0 --port=5000
 gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 120 main:app
 ```
 
-### Environment Setup
+### Flask CLI Commands
 ```bash
-# Generate secure session secret
-python -c "import secrets; print(secrets.token_hex(32))"
+# List all routes
+flask routes
 
-# Set required environment variables
-export SESSION_SECRET="your-generated-session-key"
-export OPENAI_API_KEY="your-openai-key"  # Optional for AI features
-export FLASK_ENV="development"  # or "production"
+# Start Python shell with application context
+flask shell
+
+# Set debug mode (on macOS/Linux)
+export FLASK_DEBUG=1
+flask run
+
+# Set debug mode (on Windows PowerShell)
+$env:FLASK_DEBUG=1
+flask run
 ```
 
 ### Docker Development
@@ -95,6 +158,70 @@ docker run -d \
 
 # Production deployment
 docker-compose -f docker-compose.production.yml up -d
+```
+
+### Testing Framework
+```bash
+# Run all tests
+pytest
+
+# Run tests with verbose output
+pytest -v
+
+# Stop on first failure
+pytest -x
+
+# Run a specific test file
+pytest tests/test_docker_config.py
+
+# Run a specific test function
+pytest tests/test_docker_config.py::TestDockerConfigGenerator::test_network_configuration
+
+# Run with coverage report
+pip install pytest-cov
+pytest --cov=. --cov-report=html
+
+# Run tests in Docker context
+docker exec -it dockwinterface pytest
+```
+
+### Code Quality & Linting
+```bash
+# Format code with Black
+pip install black
+black . --line-length=120
+
+# Sort imports with isort
+pip install isort
+isort . --profile black
+
+# Lint with flake8
+pip install flake8
+flake8 . --max-line-length=120
+
+# Type checking with mypy
+pip install mypy
+mypy . --ignore-missing-imports
+```
+
+### Debugging & Profiling
+```bash
+# Debug with pdb
+python -m pdb app.py
+
+# Insert breakpoint in code
+# import pdb; pdb.set_trace()
+
+# Profile performance with cProfile
+python -m cProfile -o profile.pstats app.py
+pip install snakeviz
+snakeviz profile.pstats
+
+# Debug Docker container
+docker exec -it dockwinterface /bin/bash
+
+# View container logs
+docker logs -f dockwinterface
 ```
 
 ### Testing & Debugging
@@ -154,8 +281,22 @@ The system maps user-friendly UI strings to Dockur backend flags:
 ├── rollback_manager.py # System recovery (Linux only)
 ├── ssh_docker.py       # SSH tunnel support
 ├── templates/          # Jinja2 HTML templates
+│   ├── base.html       # Base template with layout
+│   ├── index.html      # Dashboard page
+│   ├── wizard.html     # Configuration wizard
+│   └── chat.html       # AI assistant interface
+├── static/             # Static assets (CSS, JS, images)
+├── tests/              # Pytest test suite (15+ test files)
+│   ├── test_docker_config.py
+│   ├── test_api.py
+│   └── test_yaml_*.py  # Various YAML generation tests
 ├── generated_configs/  # Generated Docker configurations
-└── requirements.txt    # Python dependencies
+├── docs/               # Additional documentation
+│   └── DEPLOYMENT.md   # Production deployment guide
+├── requirements.txt    # Python dependencies
+├── pyproject.toml      # Project metadata and dependencies
+├── pytest.ini          # Pytest configuration
+└── .env.example        # Example environment variables
 ```
 
 ### Generated Outputs
@@ -163,6 +304,99 @@ The system maps user-friendly UI strings to Dockur backend flags:
 - `{name}.env`: Environment variables file
 - `{name}-config.json`: Configuration backup
 - `{name}-setup-macvlan.sh`: Macvlan network setup script (Linux)
+
+### Storage Configuration
+
+#### Default Storage (Docker Volumes)
+By default, DockWINterface creates Docker named volumes for OS image storage:
+- **OS Image Storage**: `{container-name}_os_data:/storage` - Managed Docker volume
+- **Benefits**: Portable, secure, managed by Docker, better for production
+- **Isolation**: Complete isolation from host filesystem
+- **Backup**: Use Docker volume backup commands
+
+#### Alternative Storage (Host Directories)
+Optionally, you can use host directory mounting for OS storage:
+- **Configuration**: Select "Host Directory" in the storage configuration step
+- **Path**: User-specified directory (e.g., `/opt/windows-storage`)
+- **Benefits**: Direct host access, easier manual backup
+- **Use Cases**: Development environments, specific backup requirements
+
+#### File Sharing (Optional)
+Separate from OS storage, file sharing enables host-container file transfer:
+- **Purpose**: Transfer files to/from Windows container
+- **Default Paths**:
+  - Windows 10/11: `/opt/windows/xfer:/file_share`
+  - Windows Server 2022: `/opt/windows/xfer2:/file_share`
+  - Windows Server 2025: `/opt/windows/xfer3:/file_share`
+  - Windows Server 2019: `/opt/windows/xfer4:/file_share`
+- **Enable**: Check "Enable file sharing" in storage configuration
+
+### Volume Management Commands
+
+#### Docker Volume Operations
+```bash
+# List all Docker volumes
+docker volume ls
+
+# Inspect a specific volume
+docker volume inspect {container-name}_os_data
+
+# Create a volume manually
+docker volume create {container-name}_os_data
+
+# Remove unused volumes
+docker volume prune
+
+# Remove specific volume (container must be stopped)
+docker volume rm {container-name}_os_data
+```
+
+#### Volume Backup & Restore
+```bash
+# Backup Docker volume to tar file
+docker run --rm \
+  -v {container-name}_os_data:/data \
+  -v $(pwd):/backup \
+  alpine tar czf /backup/{container-name}_backup_$(date +%Y%m%d).tar.gz -C /data .
+
+# Restore Docker volume from tar file
+docker volume create {container-name}_os_data
+docker run --rm \
+  -v {container-name}_os_data:/data \
+  -v $(pwd):/backup \
+  alpine tar xzf /backup/{container-name}_backup_YYYYMMDD.tar.gz -C /data
+```
+
+#### Migration Between Storage Types
+```bash
+# Migrate from host directory to Docker volume
+# 1. Stop container
+docker stop {container-name}
+
+# 2. Create Docker volume
+docker volume create {container-name}_os_data
+
+# 3. Copy data from host directory to volume
+docker run --rm \
+  -v /path/to/host/directory:/source \
+  -v {container-name}_os_data:/target \
+  alpine cp -a /source/. /target/
+
+# 4. Update docker-compose.yml to use volume instead of host mount
+# 5. Start container with new configuration
+docker-compose up -d
+```
+
+#### File Sharing Directory Management
+```bash
+# Create file sharing directories with proper permissions
+sudo mkdir -p /opt/windows/xfer /opt/windows/xfer2 /opt/windows/xfer3 /opt/windows/xfer4
+sudo chmod 755 /opt/windows/xfer*
+sudo chown 1000:1000 /opt/windows/xfer*
+
+# Verify file sharing directory status
+ls -la /opt/windows/
+```
 
 ## API Endpoints
 
@@ -255,23 +489,35 @@ curl -X POST http://localhost:5000/api/chat \
   -d '{"message": "Help me configure Windows 11 Pro"}'
 ```
 
-## Development Rules
+## Development Principles
 
-This project follows strict development guidelines defined in `DEVELOPMENT.md`:
-- All 12 immutable project rules must be followed
-- Production-quality code required at all times
-- Complete refactoring of any incomplete modules
-- Efficient workflow prioritization
-- 100% goal completion requirement
+This project follows strict development guidelines defined in `DEVELOPMENT.md`, with these key principles:
+
+### The 12 Immutable Project Rules
+
+1. **Foundation Features**: Never change core functionality without explicit approval
+2. **Production Quality**: Full production-ready code required at all times
+3. **Complete Refactoring**: Remove all placeholder/mock implementations
+4. **Codebase Streamlining**: Maintain lean, efficient codebase
+5. **Token Limit Strategy**: Use efficient chunking strategies, never leave fragmented code
+6. **Clarification Over Assumption**: When in doubt, ask for explicit confirmation
+7. **Efficient Workflow**: Prioritize based on project needs
+8. **Visual Task Tracking**: Maintain current task visualization
+9. **Documentation Consistency**: Update for seamless transitions
+10. **Rule Evolution**: Update rules as needed
+11. **100% Goal Completion**: Complete everything the first time
+12. **Next-Gen Innovation**: Target cutting-edge UI while maintaining stability
+
+For complete details on development practices, refer to [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Related Documentation
 
 - [README.md](README.md): Project overview and quick start
 - [DEVELOPMENT.md](DEVELOPMENT.md): Complete development rules and guidelines
-- [DEPLOYMENT.md](DEPLOYMENT.md): Production deployment guide
+- [DEPLOYMENT.md](docs/DEPLOYMENT.md): Production deployment guide
 - [CHANGELOG.md](CHANGELOG.md): Version history and updates
 
 ---
 
-*Last updated: December 2024*
+*Last updated: September 2025*
 *Warp AI compatibility: Optimized for terminal-based development workflows*

@@ -56,6 +56,11 @@ class DockerConfigGenerator:
         if volumes:
             service = compose_config['services'][config.get('name', 'windows')]
             service['volumes'] = volumes
+            
+        # Add Docker volume definitions if using named volumes
+        docker_volumes = self._generate_docker_volumes(config)
+        if docker_volumes:
+            compose_config['volumes'] = docker_volumes
 
         # Add network configuration
         networks = self._generate_networks(config)
@@ -443,23 +448,35 @@ class DockerConfigGenerator:
             return "/opt/windows/xfer"
     
     def _generate_volumes(self, config: Dict[str, Any]) -> List[str]:
-        """Generate volume mappings with automatic version-specific paths"""
+        """Generate volume mappings with Docker volumes by default, host paths optional"""
         volumes = []
         
-        # Auto-select data volume based on Windows version if not explicitly provided
-        if config.get('data_volume'):
-            # Use explicitly provided data volume
+        # Main OS/image storage - use Docker volume by default
+        storage_type = config.get('storage_type', 'docker_volume')  # 'docker_volume' or 'host_directory'
+        
+        if storage_type == 'host_directory' and config.get('data_volume'):
+            # Use explicitly provided host directory path
             volumes.append(f"{config['data_volume']}:/storage")
+            logging.info(f"Using host directory for OS storage: {config['data_volume']}")
         else:
-            # Auto-select based on Windows version
+            # Use Docker named volume (default)
+            container_name = config.get('name', 'windows')
+            volume_name = f"{container_name}_os_data"
+            volumes.append(f"{volume_name}:/storage")
+            logging.info(f"Using Docker volume for OS storage: {volume_name}")
+            
+        # File sharing volume (optional) - for sharing files between host and container
+        if config.get('enable_file_sharing', False):
+            # Auto-select based on Windows version for file sharing path
             version = config.get('version', '')
-            auto_volume_path = self._get_version_specific_volume_path(version)
+            file_share_path = self._get_version_specific_volume_path(version)
             # Ensure the volume directory exists
-            if not self._ensure_volume_directory(auto_volume_path):
-                logging.warning(f"Failed to create volume directory {auto_volume_path}, using default")
-                auto_volume_path = "/opt/windows/xfer"
-            volumes.append(f"{auto_volume_path}:/storage")
-            logging.info(f"Auto-selected volume path for version '{version}': {auto_volume_path}")
+            if not self._ensure_volume_directory(file_share_path):
+                logging.warning(f"Failed to create file sharing directory {file_share_path}, using default")
+                file_share_path = "/opt/windows/xfer"
+            # Mount file sharing directory to a different location than OS storage
+            volumes.append(f"{file_share_path}:/file_share")
+            logging.info(f"Added file sharing mount: {file_share_path}:/file_share")
         
         # Additional volumes
         if config.get('additional_volumes'):
@@ -468,6 +485,23 @@ class DockerConfigGenerator:
                     volumes.append(f"{volume['host']}:{volume['container']}")
                 elif isinstance(volume, str):
                     volumes.append(volume)
+        
+        return volumes
+    
+    def _generate_docker_volumes(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate Docker volume definitions for named volumes"""
+        volumes = {}
+        
+        # Only create volume definitions if using Docker volumes (not host directories)
+        storage_type = config.get('storage_type', 'docker_volume')
+        if storage_type == 'docker_volume':
+            container_name = config.get('name', 'windows')
+            volume_name = f"{container_name}_os_data"
+            volumes[volume_name] = {
+                'driver': 'local',
+                'name': volume_name
+            }
+            logging.info(f"Added Docker volume definition: {volume_name}")
         
         return volumes
     
